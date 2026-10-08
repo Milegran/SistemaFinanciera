@@ -12,6 +12,9 @@ Public Class Cliente
     Public Property Telefono As String
     Public Property Correo As String
     Public Property Direccion As String
+    Public Property CodigoProvincia As String
+    Public Property CodigoDistrito As String
+    Public Property CodigoCorregimiento As String
     Public Property Provincia As String
     Public Property Distrito As String
     Public Property Corregimiento As String

@@ -3,8 +3,8 @@
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title><%: Page.Title %> | CapitalWest</title>
 <webopt:bundlereference runat="server" path="~/Content/css" />
-<link rel="stylesheet" href="<%= ResolveUrl("~/Content/Financiera.css") %>" />
-<link rel="stylesheet" href="<%= ResolveUrl("~/Content/Stitch.css") %>" />
+<link rel="stylesheet" href="<%= ResolveUrl("~/Content/Financiera.css?v=capitalwest-mysql-1") %>" />
+<link rel="stylesheet" href="<%= ResolveUrl("~/Content/Stitch.css?v=capitalwest-mysql-1") %>" />
 <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head><body class="<%= If(Request.AppRelativeCurrentExecutionFilePath.ToLowerInvariant().Contains("/clientes/"), "stitch-clients", "stitch-dashboard") %>"><form id="form1" runat="server"><div class="stitch-shell">
 <asp:ScriptManager runat="server">

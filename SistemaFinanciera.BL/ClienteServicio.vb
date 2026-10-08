@@ -67,9 +67,10 @@ Public Class ClienteServicio
             errores.Add("Indique un correo válido.")
         End Try
         ComprobarTexto(c.Direccion, "Dirección", 300, True, errores)
+        If Not Regex.IsMatch(If(c.CodigoProvincia, ""), "^[0-9]{2}$") OrElse Not Regex.IsMatch(If(c.CodigoDistrito, ""), "^[0-9]{4}$") OrElse Not Regex.IsMatch(If(c.CodigoCorregimiento, ""), "^[0-9]{6}$") Then errores.Add("Seleccione provincia, distrito y corregimiento del catálogo.")
         ComprobarTexto(c.Provincia, "Provincia o comarca", 80, True, errores)
-        ComprobarTexto(c.Distrito, "Distrito", 80, True, errores)
-        ComprobarTexto(c.Corregimiento, "Corregimiento", 80, True, errores)
+        ComprobarTexto(c.Distrito, "Distrito", 150, True, errores)
+        ComprobarTexto(c.Corregimiento, "Corregimiento", 150, True, errores)
         ComprobarTexto(c.Ocupacion, "Información laboral o actividad económica", 200, True, errores)
         ComprobarTexto(c.Referencias, "Referencias", 1000, True, errores)
         If c.Ingresos < 0D OrElse c.Ingresos > 999999999999.99D OrElse Decimal.Round(c.Ingresos, 2) <> c.Ingresos Then errores.Add("Los ingresos deben ser no negativos y tener como máximo dos decimales.")

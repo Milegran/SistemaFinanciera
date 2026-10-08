@@ -38,9 +38,9 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Empleador | varchar(160) | YES | NULL | — |
 | Cargo | varchar(120) | YES | NULL | — |
 | AntiguedadMeses | int(11) | YES | NULL | — |
-| ProvinciaId | int(11) | YES | NULL | MUL |
-| DistritoId | int(11) | YES | NULL | MUL |
-| CorregimientoId | int(11) | YES | NULL | MUL |
+| CodigoProvincia | varchar(2) | YES | NULL | MUL |
+| CodigoDistrito | varchar(4) | YES | NULL | MUL |
+| CodigoCorregimiento | varchar(6) | YES | NULL | MUL |
 | CreadoPor | int(11) | YES | NULL | MUL |
 | ModificadoPor | int(11) | YES | NULL | MUL |
 | Id | int(11) | NO | — | PRI |
@@ -56,8 +56,8 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Correo | varchar(254) | NO | — | — |
 | Direccion | varchar(300) | NO | — | — |
 | Provincia | varchar(80) | NO | — | — |
-| Distrito | varchar(80) | NO | — | — |
-| Corregimiento | varchar(80) | NO | — | — |
+| Distrito | varchar(150) | NO | — | — |
+| Corregimiento | varchar(150) | NO | — | — |
 | Ocupacion | varchar(200) | NO | — | — |
 | Ingresos | decimal(14,2) | NO | — | — |
 | Referencias | varchar(1000) | NO | — | — |
@@ -65,15 +65,15 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Version | bigint(20) unsigned | NO | 1 | — |
 | CreadoUtc | datetime | NO | current_timestamp() | — |
 | ModificadoUtc | datetime | NO | current_timestamp() | — |
-## corregimientos
+## corregimiento
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
 |---|---|---|---|---|
-| Id | int(11) | NO | — | PRI |
-| DistritoId | int(11) | NO | — | MUL |
-| Codigo | varchar(30) | NO | — | UNI |
-| Nombre | varchar(80) | NO | — | — |
-| Activo | tinyint(1) | NO | 1 | — |
+| codigo_provincia | varchar(2) | NO | — | — |
+| codigo_distrito | varchar(4) | NO | — | — |
+| codigo | varchar(2) | NO | — | — |
+| codigo_corregimiento | varchar(6) | NO | — | PRI |
+| nombre_corregimiento | varchar(150) | NO | — | — |
 ## cuotas
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -100,15 +100,14 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Interes | decimal(14,2) | NO | — | — |
 | InteresCapitalizado | decimal(14,2) | NO | 0.00 | — |
 | SaldoProyectado | decimal(14,2) | NO | — | — |
-## distritos
+## distrito
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
 |---|---|---|---|---|
-| Id | int(11) | NO | — | PRI |
-| ProvinciaId | int(11) | NO | — | MUL |
-| Codigo | varchar(20) | NO | — | UNI |
-| Nombre | varchar(80) | NO | — | — |
-| Activo | tinyint(1) | NO | 1 | — |
+| codigo_provincia | varchar(2) | NO | — | — |
+| codigo_distrito | varchar(4) | NO | — | PRI |
+| codigo | varchar(2) | NO | — | — |
+| nombre_distrito | varchar(150) | NO | — | — |
 ## ejecucionesreporte
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -327,14 +326,12 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | PlazoMinimo | int(11) | NO | — | — |
 | PlazoMaximo | int(11) | NO | — | — |
 | Activo | tinyint(1) | NO | 1 | — |
-## provincias
+## provincia
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
 |---|---|---|---|---|
-| Id | int(11) | NO | — | PRI |
-| Codigo | varchar(10) | NO | — | UNI |
-| Nombre | varchar(80) | NO | — | UNI |
-| Activo | tinyint(1) | NO | 1 | — |
+| codigo_provincia | varchar(2) | NO | — | PRI |
+| nombre_provincia | varchar(50) | NO | — | — |
 ## recuperacionesclave
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |

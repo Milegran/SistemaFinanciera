@@ -11,9 +11,9 @@ Partial Public Class Clientes
     Protected WithEvents ddlEstadoCivil As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents txtTelefono As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtCorreo As Global.System.Web.UI.WebControls.TextBox
-    Protected WithEvents txtProvincia As Global.System.Web.UI.WebControls.TextBox
-    Protected WithEvents txtDistrito As Global.System.Web.UI.WebControls.TextBox
-    Protected WithEvents txtCorregimiento As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents ddlProvincia As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents ddlDistrito As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents ddlCorregimiento As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents txtDireccion As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtOcupacion As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtIngresos As Global.System.Web.UI.WebControls.TextBox

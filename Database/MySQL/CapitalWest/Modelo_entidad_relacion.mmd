@@ -10,14 +10,15 @@ erDiagram
         bigint_20_ RegistroId
     }
     clientes {
-        int_11_ ProvinciaId
-        int_11_ DistritoId
-        int_11_ CorregimientoId
         int_11_ Id PK
+        varchar_2_ CodigoProvincia FK
+        varchar_4_ CodigoDistrito FK
+        varchar_6_ CodigoCorregimiento FK
     }
-    corregimientos {
-        int_11_ Id PK
-        int_11_ DistritoId
+    corregimiento {
+        varchar_6_ codigo_corregimiento PK
+        varchar_2_ codigo_provincia
+        varchar_4_ codigo_distrito
     }
     cuotas {
         int_11_ Id PK
@@ -27,9 +28,9 @@ erDiagram
         bigint_20_ VersionId PK
         int_11_ NumeroCuota PK
     }
-    distritos {
-        int_11_ Id PK
-        int_11_ ProvinciaId
+    distrito {
+        varchar_4_ codigo_distrito PK
+        varchar_2_ codigo_provincia
     }
     ejecucionesreporte {
         bigint_20_ Id PK
@@ -108,8 +109,8 @@ erDiagram
     productosfinancieros {
         int_11_ Id PK
     }
-    provincias {
-        int_11_ Id PK
+    provincia {
+        varchar_2_ codigo_provincia PK
     }
     recuperacionesclave {
         bigint_20_ Id PK
@@ -174,10 +175,9 @@ erDiagram
     }
     clientes ||--o{ referenciascliente : relaciona
     clientes ||--o{ solicitudes : relaciona
-    corregimientos |o--o{ clientes : relaciona
+    corregimiento |o--o{ clientes : relaciona
     cuotas ||--o{ aplicacionespago : relaciona
-    distritos |o--o{ clientes : relaciona
-    distritos ||--o{ corregimientos : relaciona
+    distrito |o--o{ clientes : relaciona
     estados |o--o{ historialprestamos : relaciona
     estados |o--o{ historialsolicitudes : relaciona
     estados ||--o{ prestamos : relaciona
@@ -206,8 +206,7 @@ erDiagram
     productosfinancieros ||--o{ productometodos : relaciona
     productosfinancieros ||--o{ productoperiodicidades : relaciona
     productosfinancieros ||--o{ tasas : relaciona
-    provincias |o--o{ clientes : relaciona
-    provincias ||--o{ distritos : relaciona
+    provincia |o--o{ clientes : relaciona
     reportes ||--o{ ejecucionesreporte : relaciona
     reportes ||--o{ rolreportes : relaciona
     roles ||--o{ rolpermisos : relaciona

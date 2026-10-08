@@ -26,7 +26,7 @@ Validado mediante importación real en **MariaDB 10.4.32 de XAMPP**. Utiliza Inn
 
 Catálogos de roles, estados, métodos, periodicidades, tipos de tasa, formas de pago, estados civiles, permisos, reportes y parámetros. No incluye usuarios de acceso, contraseñas, clientes, productos ni préstamos de ejemplo. Cree el primer administrador desde un proceso de alta que calcule un hash seguro y le asigne ADMINISTRADOR en UsuarioRoles.
 
-Los catálogos geográficos están estructurados en Provincias → Distritos → Corregimientos, pero deben cargarse con datos oficiales antes de usar las listas dependientes. No se inventó una división territorial. Los textos Provincia/Distrito/Corregimiento de Clientes se conservan para facilitar la futura adaptación del módulo existente; los IDs opcionales soportan el catálogo normalizado y comprueban la dependencia territorial. La aplicación debe guardar ambos de manera coherente y utilizar IDs en nuevos formularios.
+Los catálogos suministrados ya están cargados en `provincia`, `distrito` y `corregimiento`: 13 provincias, 82 distritos y 668 corregimientos. El formulario utiliza listas dependientes y guarda los códigos de texto originales, incluidos los ceros iniciales. Los nombres de ubicación del cliente se obtienen del catálogo. BRILLANTE (130601) se conserva sin habilitar porque falta su distrito 1306. Para actualizar una instalación existente, consulte `../Ubicacion/LEEME.md`.
 
 ReferenciasCliente permite varias referencias por cliente; Referencias en Clientes conserva el texto del módulo actual. Empleador, Cargo y AntiguedadMeses complementan Ocupacion. RucDv permite separar el dígito verificador. La edad mínima, formatos de cédula/RUC, correo y al menos una referencia se validan en la lógica de negocio al guardar el conjunto completo.
 
@@ -65,8 +65,15 @@ Los tokens de recuperación/sesión se almacenan como hash SHA-256 del token ale
 
 ## Conexión del proyecto actual
 
-La aplicación VB.NET sigue usando SQL Server LocalDB. Este SQL no migra los datos ni cambia Web.config. Para conectar CapitalWest en MySQL hay que adaptar DAL y proveedor, mapear catálogos/campos y usar consultas parametrizadas. Version es un contador de concurrencia: UPDATE ... SET Version=Version+1 WHERE Id=@Id AND Version=@Version, comprobando filas afectadas.
+El módulo de clientes y el dashboard utilizan MySqlConnector y la base `capitalwest` de MariaDB/MySQL. La conexión predeterminada usa 127.0.0.1:3306 y usuario root para XAMPP local. Consulte Database/README.md para importar la base, restaurar NuGet y configurar cada equipo.
+
+Version es un contador numérico de concurrencia que la DAL incrementa al actualizar, comprobando las filas afectadas. La interfaz conserva su token de ocho bytes. Los datos de LocalDB no se transfieren automáticamente; 001_Clientes.sql es histórico.
+
+La migración del módulo existente no implementa todavía las operaciones financieras de los otros módulos.
 
 ## Verificación
 
-La importación y las 28 pruebas se ejecutaron en una instancia aislada, distinta del servicio MySQL habitual. Los datos de prueba se revirtieron con transacciones; la base entregada solo contiene catálogos. Las pruebas comprueban estructura, permisos, referencias, valores inválidos, pagos completos/parciales, anulación, estado de cuenta y auditoría inmutable. No prueban los cinco algoritmos financieros ni la conexión de la aplicación, que requieren implementación y pruebas en BL/DAL.
+La importación y las 28 pruebas SQL se ejecutaron en una instancia aislada, distinta del servicio MySQL habitual. La base entregada solo contiene catálogos. Además pasaron 42 comprobaciones de clientes mediante BL/DAL, incluida la conexión MariaDB y la jerarquía territorial; los datos de prueba fueron revertidos. Se comprobó la migración repetida y la conservación de clientes anteriores. Las pruebas SQL cubren estructura, permisos, referencias, valores inválidos, pagos completos/parciales, anulación, estado de cuenta y auditoría inmutable; no prueban los cinco algoritmos financieros pendientes de implementación.
+
+
+Catálogos geográficos obligatorios: consulte [Ubicación]( ../Ubicacion/LEEME.md ). Para una instalación existente importe `ActualizarUbicacion.sql`; el esquema completo se reserva para bases nuevas.

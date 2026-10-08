@@ -8,7 +8,7 @@ Fuentes: Proyecto No. 2 DS8.pdf, secciones 3–19, y Diseño detallado de pantal
 | Bloqueo, recuperación y sesiones | Pantallas 3.1–3.3 | Usuarios, SesionesUsuario, RecuperacionesClave, ParametrosSistema |
 | Clientes, identificación panameña y datos personales | PDF 6; pantallas 5.1–5.3 | Clientes, EstadosCiviles |
 | Empleador, cargo, antigüedad y referencias repetibles | Pantalla 5.2 | Clientes, ReferenciasCliente |
-| Listas territoriales dependientes | Pantallas 5.2 y 10.6 | Provincias, Distritos, Corregimientos |
+| Listas territoriales dependientes | Pantallas 5.2 y 10.6 y catálogos recibidos | provincia, distrito, corregimiento; códigos de texto y selectores relacionados |
 | Productos, límites, costos y periodicidades | PDF 3, 5, 7; pantallas 6.1–6.2 | ProductosFinancieros, ProductoMetodos, ProductoPeriodicidades |
 | Tasas, historial y condiciones pactadas | PDF 5, 12; pantallas 6.3 y 7.2 | Tasas, TiposTasa, Solicitudes, Prestamos |
 | Cinco métodos extensibles y documentación | PDF 4, 13, 18–19; pantallas 10.4–10.5 | MetodosCalculo; clases de BL pendientes para ejecución |

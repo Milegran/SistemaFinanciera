@@ -103,7 +103,7 @@
       "resultado": "PASÓ"
     },
     {
-      "prueba": "Distritos no pueden referenciar provincia inexistente",
+      "prueba": "Cliente rechaza provincia inexistente",
       "resultado": "PASÓ"
     },
     {

@@ -98,9 +98,9 @@ Public Class Clientes
         txtTelefono.Text = If(c.Telefono, "")
         txtCorreo.Text = If(c.Correo, "")
         txtDireccion.Text = If(c.Direccion, "")
-        txtProvincia.Text = If(c.Provincia, "")
-        txtDistrito.Text = If(c.Distrito, "")
-        txtCorregimiento.Text = If(c.Corregimiento, "")
+        CargarUbicacion(ddlProvincia, 1, c.CodigoProvincia)
+        CargarUbicacion(ddlDistrito, 2, c.CodigoDistrito)
+        CargarUbicacion(ddlCorregimiento, 3, c.CodigoCorregimiento)
         txtOcupacion.Text = If(c.Ocupacion, "")
         txtReferencias.Text = If(c.Referencias, "")
         txtFechaNacimiento.Text = If(c.FechaNacimiento.HasValue, c.FechaNacimiento.GetValueOrDefault().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), "")
@@ -108,6 +108,25 @@ Public Class Clientes
         ActualizarTipoPersona()
         pnlFormularioCliente.Visible = True
         pnlListadoClientes.Visible = False
+    End Sub
+    Private Sub CargarUbicacion(lista As DropDownList, nivel As Integer, Optional seleccionado As String = "")
+        lista.Items.Clear()
+        lista.Items.Add(New ListItem("Seleccione...", ""))
+        Dim repo As New ClienteRepositorio(ConfigurationManager.ConnectionStrings("SistemaFinanciera").ConnectionString)
+        For Each opcion In repo.Ubicaciones(nivel, ddlProvincia.SelectedValue, ddlDistrito.SelectedValue)
+            lista.Items.Add(New ListItem(opcion.Value, opcion.Key))
+        Next
+        If lista.Items.FindByValue(If(seleccionado, "")) IsNot Nothing Then lista.SelectedValue = If(seleccionado, "")
+        lista.Enabled = nivel = 1 OrElse (ddlProvincia.SelectedValue <> "" AndAlso (nivel = 2 OrElse ddlDistrito.SelectedValue <> ""))
+    End Sub
+    Protected Sub ProvinciaCambiada(sender As Object, e As EventArgs) Handles ddlProvincia.SelectedIndexChanged
+        Ejecutar(Sub()
+                     CargarUbicacion(ddlDistrito, 2)
+                     CargarUbicacion(ddlCorregimiento, 3)
+                 End Sub)
+    End Sub
+    Protected Sub DistritoCambiado(sender As Object, e As EventArgs) Handles ddlDistrito.SelectedIndexChanged
+        Ejecutar(Sub() CargarUbicacion(ddlCorregimiento, 3))
     End Sub
     Private Sub ActualizarTipoPersona()
         Dim natural = ddlTipoPersona.SelectedValue <> "JURIDICA"
@@ -130,7 +149,7 @@ Public Class Clientes
         ActualizarTipoPersona()
     End Sub
     Protected Sub NuevoCliente(sender As Object, e As EventArgs) Handles btnNuevoCliente.Click
-        MostrarFormulario(New Cliente With {.TipoPersona = "NATURAL", .TipoIdentificacion = "CEDULA"})
+        Ejecutar(Sub() MostrarFormulario(New Cliente With {.TipoPersona = "NATURAL", .TipoIdentificacion = "CEDULA"}))
     End Sub
     Protected Sub Cancelar(sender As Object, e As EventArgs) Handles btnCancelar.Click
         ClienteId = 0
@@ -161,9 +180,12 @@ Public Class Clientes
                      c.Telefono = txtTelefono.Text.Trim()
                      c.Correo = txtCorreo.Text.Trim()
                      c.Direccion = txtDireccion.Text.Trim()
-                     c.Provincia = txtProvincia.Text.Trim()
-                     c.Distrito = txtDistrito.Text.Trim()
-                     c.Corregimiento = txtCorregimiento.Text.Trim()
+                     c.CodigoProvincia = ddlProvincia.SelectedValue
+                     c.Provincia = If(ddlProvincia.SelectedValue = "", "", ddlProvincia.SelectedItem.Text)
+                     c.CodigoDistrito = ddlDistrito.SelectedValue
+                     c.Distrito = If(ddlDistrito.SelectedValue = "", "", ddlDistrito.SelectedItem.Text)
+                     c.CodigoCorregimiento = ddlCorregimiento.SelectedValue
+                     c.Corregimiento = If(ddlCorregimiento.SelectedValue = "", "", ddlCorregimiento.SelectedItem.Text)
                      c.Ocupacion = txtOcupacion.Text.Trim()
                      c.Referencias = txtReferencias.Text.Trim()
                      Dim id = Servicio.Guardar(c)

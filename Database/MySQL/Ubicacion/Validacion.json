@@ -1,0 +1,16 @@
+{
+  "servidor": "MariaDB 10.4.32 aislado, puerto 63316",
+  "catalogos": {
+    "provincia": 13,
+    "distrito": 82,
+    "corregimiento": 668
+  },
+  "pruebas_sql": 28,
+  "pruebas_clientes": 42,
+  "importacion_nueva": "correcta",
+  "actualizacion_repetida": "correcta",
+  "actualizacion_con_originales_importados": "correcta",
+  "conservacion_clientes_anteriores": "correcta",
+  "navegador": "selectores dependientes y reinicio al cambiar provincia verificados",
+  "pendiente": "130601 BRILLANTE: distrito 1306 ausente en el archivo recibido"
+}
