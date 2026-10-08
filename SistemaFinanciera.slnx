@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SistemaFinanciera.BL/SistemaFinanciera.BL.vbproj" Id="7cb0ed16-14f2-4732-98b5-9c5650897544" />
+  <Project Path="SistemaFinanciera.DAL/SistemaFinanciera.DAL.vbproj" Id="bdb74754-47fe-48cd-8241-cac30d873b16" />
+  <Project Path="SistemaFinanciera.Entities/SistemaFinanciera.Entities.vbproj" Id="80e749c3-38f3-4cfb-9440-cac63888910a" />
+  <Project Path="SistemaFinanciera/SistemaFinanciera.vbproj" Id="cd8e53d2-b177-494b-ae08-1ceef98e43d7" />
+</Solution>
