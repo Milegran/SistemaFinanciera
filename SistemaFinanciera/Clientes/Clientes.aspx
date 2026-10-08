@@ -1,352 +1,61 @@
-﻿<%@ Page Title="Clientes" Language="VB" AutoEventWireup="false"
-    MasterPageFile="~/Site.Master"
-    CodeBehind="Clientes.aspx.vb"
-    Inherits="SistemaFinanciera.Clientes" %>
-
-<asp:Content ID="Content1"
-    ContentPlaceHolderID="HeadContent"
-    runat="server">
+﻿<%@ Page Title="Clientes" Language="VB" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Clientes.aspx.vb" Inherits="SistemaFinanciera.Clientes" %>
+<asp:Content ID="Head" ContentPlaceHolderID="HeadContent" runat="server" />
+<asp:Content ID="Body" ContentPlaceHolderID="MainContent" runat="server">
+<div class="clientes">
+<asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="status" aria-live="polite"><asp:Literal ID="litMensaje" runat="server" Mode="Encode" /></asp:Panel>
+<asp:Panel ID="pnlListadoClientes" runat="server">
+    <div class="client-title"><div><h1>Clientes <small>PA</small></h1><p>Gestión de cartera <span style="padding:0 8px">/</span> Listado de clientes registrados</p></div><asp:Button ID="btnNuevoCliente" runat="server" Text="+ Nuevo cliente" CssClass="btn btn-primary" CausesValidation="false" /></div>
+    <div class="client-kpis">
+        <button type="button" class="client-kpi" data-client-filter="1"><span class="kpi-heading">Clientes activos</span><span class="kpi-value"><asp:Literal ID="litKpiActivos" runat="server" Mode="Encode" /></span><span class="kpi-note">Ver listado activo ↗</span></button>
+        <article class="client-kpi"><span class="kpi-heading">Con préstamo vigente</span><span class="kpi-value">—</span><span class="kpi-note">Disponible al registrar préstamos</span></article>
+        <button type="button" class="client-kpi muted" data-client-filter="0"><span class="kpi-heading">Clientes inactivos</span><span class="kpi-value"><asp:Literal ID="litKpiInactivos" runat="server" Mode="Encode" /></span><span class="kpi-note">Ver listado inactivo ↗</span></button>
+    </div>
+    <div class="client-filters">
+        <div><label class="sr-only" for="<%= txtBuscar.ClientID %>">Buscar clientes</label><asp:TextBox ID="txtBuscar" runat="server" CssClass="form-control" MaxLength="254" placeholder="Buscar por nombre, cédula, teléfono o correo..." /></div>
+        <div><label class="sr-only" for="<%= ddlEstado.ClientID %>">Estado</label><asp:DropDownList ID="ddlEstado" runat="server" CssClass="form-select" AutoPostBack="true"><asp:ListItem Text="Estado: Todos" Value="" /><asp:ListItem Text="Activos" Value="1" /><asp:ListItem Text="Inactivos" Value="0" /></asp:DropDownList></div>
+        <div><label class="sr-only" for="<%= ddlProvinciaFiltro.ClientID %>">Provincia</label><asp:DropDownList ID="ddlProvinciaFiltro" runat="server" CssClass="form-select" AutoPostBack="true" /></div>
+        <div><label class="sr-only" for="<%= ddlPersonaFiltro.ClientID %>">Tipo de persona</label><asp:DropDownList ID="ddlPersonaFiltro" runat="server" CssClass="form-select" AutoPostBack="true"><asp:ListItem Text="Persona: Todas" Value="" /><asp:ListItem Text="Natural" Value="NATURAL" /><asp:ListItem Text="Jurídica" Value="JURIDICA" /></asp:DropDownList></div>
+        <div class="filter-actions"><asp:Button ID="btnBuscar" runat="server" Text="Buscar" CssClass="btn btn-outline-primary" CausesValidation="false" /><asp:Button ID="btnLimpiar" runat="server" Text="↺" ToolTip="Limpiar filtros" CssClass="btn btn-light" CausesValidation="false" /></div>
+    </div>
+    <section class="cw-card client-list"><div class="list-caption"><div><strong>Listado de clientes</strong><small>Todos los clientes registrados en la plataforma</small></div><div class="d-flex gap-2"><asp:Button ID="btnExportar" runat="server" Text="CSV / Excel" ToolTip="Descargar CSV compatible con Excel" CssClass="btn btn-sm btn-outline-secondary" CausesValidation="false" /><button type="button" class="btn btn-sm btn-outline-secondary" data-print-clients>Imprimir / PDF</button></div></div>
+    <div class="table-responsive"><asp:GridView ID="gvClientes" runat="server" AutoGenerateColumns="false" DataKeyNames="Id,Activo,Version" CssClass="table table-hover align-middle" GridLines="None" EmptyDataText="No hay clientes para los filtros seleccionados." AllowPaging="true" PageSize="10">
+        <Columns>
+            <asp:BoundField DataField="Identificacion" HeaderText="Cédula / RUC" />
+            <asp:TemplateField HeaderText="Nombre completo"><ItemTemplate><div class="client-name"><span class="person-avatar"><%#: Iniciales(Eval("NombreCompleto")) %></span><span><strong><%#: Eval("NombreCompleto") %></strong><small><%#: If(CStr(Eval("TipoPersona")) = "NATURAL", "Natural", "Jurídica") %></small></span></div></ItemTemplate></asp:TemplateField>
+            <asp:BoundField DataField="Telefono" HeaderText="Teléfono" />
+            <asp:BoundField DataField="Provincia" HeaderText="Provincia" />
+            <asp:TemplateField HeaderText="Estado"><ItemTemplate><span class='<%# If(CBool(Eval("Activo")), "status-pill", "status-pill inactive") %>'><%#: Eval("Estado") %></span></ItemTemplate></asp:TemplateField>
+            <asp:TemplateField HeaderText="Acciones"><ItemTemplate>
+                <asp:LinkButton ID="btnVer" runat="server" Text="◎" ToolTip="Consultar perfil" aria-label="Consultar perfil" CommandName="VerCliente" CommandArgument='<%# CType(Container, GridViewRow).RowIndex %>' CssClass="action-icon" CausesValidation="false" />
+                <asp:LinkButton ID="btnEditar" runat="server" Text="✎" ToolTip="Editar cliente" aria-label="Editar cliente" CommandName="EditarCliente" CommandArgument='<%# CType(Container, GridViewRow).RowIndex %>' CssClass="action-icon" CausesValidation="false" />
+                <asp:LinkButton ID="btnEstado" runat="server" Text="⊘" ToolTip='<%# If(CBool(Eval("Activo")), "Desactivar cliente", "Reactivar cliente") %>' aria-label="Cambiar estado" CommandName="CambiarEstado" CommandArgument='<%# CType(Container, GridViewRow).RowIndex %>' CssClass="action-icon" CausesValidation="false" OnClientClick="return confirm('¿Desea cambiar el estado de este cliente?');" />
+            </ItemTemplate></asp:TemplateField>
+        </Columns>
+    </asp:GridView></div><div class="grid-count"><asp:Literal ID="litConteo" runat="server" Mode="Encode" /></div></section>
+</asp:Panel>
+<asp:Panel ID="pnlPerfil" runat="server" Visible="false">
+    <div class="profile-actions"><asp:Button ID="btnVolverPerfil" runat="server" Text="← Volver al listado" CssClass="btn btn-light" CausesValidation="false" /><asp:Button ID="btnEditarPerfil" runat="server" Text="Editar cliente" CssClass="btn btn-primary" CausesValidation="false" /></div><asp:Literal ID="litPerfil" runat="server" />
+</asp:Panel>
+<asp:Panel ID="pnlFormularioCliente" runat="server" Visible="false" CssClass="form-overlay" role="dialog" aria-modal="true" aria-label="Registro y edición de cliente">
+<div class="form-dialog"><h5><asp:Literal ID="litTituloFormulario" runat="server" Mode="Encode" /></h5><p class="text-muted">Completa la información del cliente. Los campos personales no aplican a personas jurídicas.</p>
+<asp:Panel ID="pnlErrorFormulario" runat="server" Visible="false" CssClass="alert alert-danger" role="alert"><asp:Literal ID="litErrorFormulario" runat="server" Mode="Encode" /></asp:Panel>
+<asp:HiddenField ID="hidFormTab" runat="server" Value="personal" />
+<div class="form-tabs" role="tablist" aria-label="Secciones del formulario"><button type="button" class="form-tab" id="tab-personal" role="tab" aria-controls="seccion-personal" aria-selected="true" data-form-tab="personal">Datos personales</button><button type="button" class="form-tab" id="tab-contacto" role="tab" aria-controls="seccion-contacto" aria-selected="false" data-form-tab="contacto">Contacto</button><button type="button" class="form-tab" id="tab-laboral" role="tab" aria-controls="seccion-laboral" aria-selected="false" data-form-tab="laboral">Laboral</button><button type="button" class="form-tab" id="tab-referencias" role="tab" aria-controls="seccion-referencias" aria-selected="false" data-form-tab="referencias">Referencias</button></div>
+<section class="form-section" id="seccion-personal" role="tabpanel" aria-labelledby="tab-personal"><div class="row g-3"><div class="col-md-4"><label class="form-label" for="<%= ddlTipoPersona.ClientID %>">Tipo de persona</label><asp:DropDownList ID="ddlTipoPersona" runat="server" CssClass="form-select" AutoPostBack="true"><asp:ListItem Text="Seleccione..." Value="" /><asp:ListItem Value="NATURAL" Text="Natural" /><asp:ListItem Value="JURIDICA" Text="Jurídica" /></asp:DropDownList></div>
+<div class="col-md-4"><label class="form-label" for="<%= ddlTipoIdentificacion.ClientID %>">Tipo de identificación</label><asp:DropDownList ID="ddlTipoIdentificacion" runat="server" CssClass="form-select" ><asp:ListItem Text="Seleccione..." Value="" /><asp:ListItem Value="CEDULA" Text="Cédula" /><asp:ListItem Value="PASAPORTE" Text="Pasaporte" /><asp:ListItem Value="RUC" Text="RUC" /></asp:DropDownList></div>
+<div class="col-md-4"><label class="form-label" for="<%= txtIdentificacion.ClientID %>">Identificación</label><asp:TextBox ID="txtIdentificacion" runat="server" CssClass="form-control" MaxLength="30"  /></div>
+<div class="col-md-6"><label class="form-label" for="<%= txtNombres.ClientID %>">Nombres / razón social</label><asp:TextBox ID="txtNombres" runat="server" CssClass="form-control" MaxLength="120"  /></div>
+<div class="col-md-6"><label class="form-label" for="<%= txtApellidos.ClientID %>">Apellidos (persona natural)</label><asp:TextBox ID="txtApellidos" runat="server" CssClass="form-control" MaxLength="120"  /></div>
+<div class="col-md-4"><label class="form-label" for="<%= txtFechaNacimiento.ClientID %>">Fecha de nacimiento (persona natural)</label><asp:TextBox ID="txtFechaNacimiento" runat="server" CssClass="form-control" MaxLength="120" TextMode="Date"  /></div>
+<div class="col-md-4"><label class="form-label" for="<%= ddlSexo.ClientID %>">Sexo (persona natural)</label><asp:DropDownList ID="ddlSexo" runat="server" CssClass="form-select" ><asp:ListItem Text="Seleccione..." Value="" /><asp:ListItem Value="F" Text="Femenino" /><asp:ListItem Value="M" Text="Masculino" /><asp:ListItem Value="OTRO" Text="Otro" /><asp:ListItem Value="NO_APLICA" Text="No aplica" /></asp:DropDownList></div>
+<div class="col-md-4"><label class="form-label" for="<%= ddlEstadoCivil.ClientID %>">Estado civil (persona natural)</label><asp:DropDownList ID="ddlEstadoCivil" runat="server" CssClass="form-select" ><asp:ListItem Text="Seleccione..." Value="" /><asp:ListItem Value="SOLTERO" Text="Soltero" /><asp:ListItem Value="CASADO" Text="Casado" /><asp:ListItem Value="UNIDO" Text="Unido" /><asp:ListItem Value="DIVORCIADO" Text="Divorciado" /><asp:ListItem Value="VIUDO" Text="Viudo" /><asp:ListItem Value="NO_APLICA" Text="No aplica" /></asp:DropDownList></div></div></section><section class="form-section" id="seccion-contacto" role="tabpanel" aria-labelledby="tab-contacto"><div class="row g-3"><div class="col-md-6"><label class="form-label" for="<%= txtTelefono.ClientID %>">Teléfono</label><asp:TextBox ID="txtTelefono" runat="server" CssClass="form-control" MaxLength="20" placeholder="6000-0000 o +507 6000-0000" /></div>
+<div class="col-md-6"><label class="form-label" for="<%= txtCorreo.ClientID %>">Correo electrónico</label><asp:TextBox ID="txtCorreo" runat="server" CssClass="form-control" MaxLength="254" TextMode="Email"  /></div>
+<div class="col-md-4"><label class="form-label" for="<%= txtProvincia.ClientID %>">Provincia o comarca</label><asp:TextBox ID="txtProvincia" runat="server" CssClass="form-control" MaxLength="80"  /></div>
+<div class="col-md-4"><label class="form-label" for="<%= txtDistrito.ClientID %>">Distrito</label><asp:TextBox ID="txtDistrito" runat="server" CssClass="form-control" MaxLength="80"  /></div>
+<div class="col-md-4"><label class="form-label" for="<%= txtCorregimiento.ClientID %>">Corregimiento</label><asp:TextBox ID="txtCorregimiento" runat="server" CssClass="form-control" MaxLength="80"  /></div>
+<div class="col-12"><label class="form-label" for="<%= txtDireccion.ClientID %>">Dirección</label><asp:TextBox ID="txtDireccion" runat="server" CssClass="form-control" MaxLength="300"  /></div></div></section><section class="form-section" id="seccion-laboral" role="tabpanel" aria-labelledby="tab-laboral"><div class="row g-3"><div class="col-md-6"><label class="form-label" for="<%= txtOcupacion.ClientID %>">Información laboral / actividad económica</label><asp:TextBox ID="txtOcupacion" runat="server" CssClass="form-control" MaxLength="200"  /></div>
+<div class="col-md-6"><label class="form-label" for="<%= txtIngresos.ClientID %>">Ingresos mensuales (B/.)</label><asp:TextBox ID="txtIngresos" runat="server" CssClass="form-control" MaxLength="120" TextMode="Number" step="0.01" min="0" max="999999999999.99" /></div></div></section><section class="form-section" id="seccion-referencias" role="tabpanel" aria-labelledby="tab-referencias"><div class="row g-3"><div class="col-12"><label class="form-label" for="<%= txtReferencias.ClientID %>">Referencias (nombre, contacto y relación)</label><asp:TextBox ID="txtReferencias" runat="server" CssClass="form-control" MaxLength="1000" TextMode="MultiLine" Rows="3" /></div></div></section>
+<div class="modal-footer-cw"><asp:Button ID="btnCancelar" runat="server" Text="Cancelar" CssClass="btn btn-light border" CausesValidation="false" OnClientClick="this.form.noValidate=true;" /><asp:Button ID="btnGuardarCliente" runat="server" Text="Guardar cliente" CssClass="btn btn-primary" OnClientClick="this.form.noValidate=true;" /></div>
+</div></asp:Panel>
+</div><script src="<%= ResolveUrl("~/Scripts/StitchClientes.js") %>"></script>
 </asp:Content>
-
-<asp:Content ID="Content2"
-    ContentPlaceHolderID="MainContent"
-    runat="server">
-
-<div class="page-header">
-    <h1>Clientes</h1>
-    <p>Administración de clientes registrados en el sistema.</p>
-</div>
-
-
-<!-- ==========================================
-     FORMULARIO NUEVO / EDITAR CLIENTE
-     ========================================== -->
-
-<asp:Panel ID="pnlFormularioCliente"
-    runat="server"
-    Visible="False"
-    CssClass="card-financiera mb-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h5 class="mb-1">Registrar cliente</h5>
-            <small class="text-muted">
-                Complete la información del nuevo cliente.
-            </small>
-        </div>
-
-        <span class="badge bg-light text-dark border">
-            Nuevo cliente
-        </span>
-
-    </div>
-
-
-    <div class="row g-3">
-
-        <!-- Identificación -->
-
-        <div class="col-md-4">
-
-            <label class="form-label">
-                Tipo de identificación
-            </label>
-
-            <asp:DropDownList ID="ddlTipoIdentificacion"
-                runat="server"
-                CssClass="form-select">
-
-                <asp:ListItem Text="Seleccione..." Value="" />
-                <asp:ListItem Text="Cédula" Value="CEDULA" />
-                <asp:ListItem Text="Pasaporte" Value="PASAPORTE" />
-
-            </asp:DropDownList>
-
-        </div>
-
-
-        <div class="col-md-4">
-
-            <label class="form-label">
-                Número de identificación
-            </label>
-
-            <asp:TextBox ID="txtIdentificacion"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Ej. 8-123-456">
-            </asp:TextBox>
-
-        </div>
-
-
-        <!-- Fecha de nacimiento -->
-
-        <div class="col-md-4">
-
-            <label class="form-label">
-                Fecha de nacimiento
-            </label>
-
-            <asp:TextBox ID="txtFechaNacimiento"
-                runat="server"
-                TextMode="Date"
-                CssClass="form-control">
-            </asp:TextBox>
-
-        </div>
-
-
-        <!-- Nombre -->
-
-        <div class="col-md-6">
-
-            <label class="form-label">
-                Nombres
-            </label>
-
-            <asp:TextBox ID="txtNombres"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Nombres del cliente">
-            </asp:TextBox>
-
-        </div>
-
-
-        <div class="col-md-6">
-
-            <label class="form-label">
-                Apellidos
-            </label>
-
-            <asp:TextBox ID="txtApellidos"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Apellidos del cliente">
-            </asp:TextBox>
-
-        </div>
-
-
-        <!-- Contacto -->
-
-        <div class="col-md-6">
-
-            <label class="form-label">
-                Teléfono
-            </label>
-
-            <asp:TextBox ID="txtTelefono"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Ej. 6000-0000">
-            </asp:TextBox>
-
-        </div>
-
-
-        <div class="col-md-6">
-
-            <label class="form-label">
-                Correo electrónico
-            </label>
-
-            <asp:TextBox ID="txtCorreo"
-                runat="server"
-                TextMode="Email"
-                CssClass="form-control"
-                placeholder="cliente@correo.com">
-            </asp:TextBox>
-
-        </div>
-
-
-        <!-- Dirección -->
-
-        <div class="col-12">
-
-            <label class="form-label">
-                Dirección
-            </label>
-
-            <asp:TextBox ID="txtDireccion"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Dirección residencial">
-            </asp:TextBox>
-
-        </div>
-
-
-        <!-- Información laboral -->
-
-        <div class="col-md-6">
-
-            <label class="form-label">
-                Ocupación
-            </label>
-
-            <asp:TextBox ID="txtOcupacion"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Ocupación del cliente">
-            </asp:TextBox>
-
-        </div>
-
-
-        <div class="col-md-6">
-
-            <label class="form-label">
-                Ingresos mensuales
-            </label>
-
-            <div class="input-group">
-
-                <span class="input-group-text">$</span>
-
-                <asp:TextBox ID="txtIngresos"
-                    runat="server"
-                    TextMode="Number"
-                    CssClass="form-control"
-                    placeholder="0.00">
-                </asp:TextBox>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- Botones -->
-
-    <div class="d-flex justify-content-end gap-2 mt-4">
-
-        <asp:Button ID="btnCancelar"
-            runat="server"
-            Text="Cancelar"
-            CssClass="btn btn-light border"
-            CausesValidation="False" />
-
-        <asp:Button ID="btnGuardarCliente"
-            runat="server"
-            Text="Guardar cliente"
-            CssClass="btn btn-primary" />
-
-    </div>
-
-</asp:Panel>
-
-
-<!-- ==========================================
-     LISTADO
-     ========================================== -->
-
-<asp:Panel ID="pnlListadoClientes"
-    runat="server"
-    CssClass="card-financiera">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h5 class="mb-1">Listado de clientes</h5>
-
-            <small class="text-muted">
-                Consulte y administre la información de los clientes.
-            </small>
-        </div>
-
-        <asp:Button ID="btnNuevoCliente"
-            runat="server"
-            Text="+ Nuevo cliente"
-            CssClass="btn btn-primary" />
-
-    </div>
-
-
-    <!-- Búsqueda -->
-
-    <div class="row g-3 mb-3">
-
-        <div class="col-md-6">
-
-            <asp:TextBox ID="txtBuscar"
-                runat="server"
-                CssClass="form-control"
-                placeholder="Buscar por nombre, cédula o correo...">
-            </asp:TextBox>
-
-        </div>
-
-
-        <div class="col-md-3">
-
-            <asp:DropDownList ID="ddlEstado"
-                runat="server"
-                CssClass="form-select">
-
-                <asp:ListItem Text="Todos los estados" Value="" />
-                <asp:ListItem Text="Activos" Value="1" />
-                <asp:ListItem Text="Inactivos" Value="0" />
-
-            </asp:DropDownList>
-
-        </div>
-
-
-        <div class="col-md-3">
-
-            <asp:Button ID="btnBuscar"
-                runat="server"
-                Text="Buscar"
-                CssClass="btn btn-outline-primary w-100" />
-
-        </div>
-
-    </div>
-
-
-    <!-- Tabla -->
-
-    <div class="table-responsive">
-
-        <asp:GridView ID="gvClientes"
-            runat="server"
-            AutoGenerateColumns="False"
-            CssClass="table table-hover align-middle"
-            GridLines="None"
-            EmptyDataText="No hay clientes registrados.">
-
-            <Columns>
-
-                <asp:BoundField
-                    DataField="Identificacion"
-                    HeaderText="Identificación" />
-
-                <asp:BoundField
-                    DataField="NombreCompleto"
-                    HeaderText="Cliente" />
-
-                <asp:BoundField
-                    DataField="Telefono"
-                    HeaderText="Teléfono" />
-
-                <asp:BoundField
-                    DataField="Correo"
-                    HeaderText="Correo" />
-
-                <asp:BoundField
-                    DataField="Estado"
-                    HeaderText="Estado" />
-
-            </Columns>
-
-        </asp:GridView>
-
-    </div>
-
-</asp:Panel>
-    </asp:Content>

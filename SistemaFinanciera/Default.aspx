@@ -1,20 +1,12 @@
-﻿<%@ Page Title="Home Page" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Default.aspx.vb" Inherits="SistemaFinanciera._Default" %>
-
-<asp:Content ID="BodyContent"
-    ContentPlaceHolderID="MainContent"
-    runat="server">
-
-    <div class="page-header">
-        <h1>Dashboard</h1>
-        <p>Resumen general de la actividad financiera.</p>
-    </div>
-
-    <div class="card-financiera">
-        <h5>Bienvenido al Sistema de Gestión Financiera</h5>
-        <p>
-            Desde este panel podrá administrar clientes,
-            solicitudes, préstamos y pagos.
-        </p>
-    </div>
-
-</asp:Content>
+﻿<%@ Page Title="Inicio" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="false" CodeBehind="Default.aspx.vb" Inherits="SistemaFinanciera._Default" %>
+<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+<div class="page-header"><div><h1>Bienvenido a CapitalWest <span style="color:#0d7a48">↗</span></h1><p>Tu cartera de clientes, organizada para seguir creciendo.</p></div><a class="btn btn-primary" href="<%= ResolveUrl("~/Clientes/Clientes.aspx") %>">+ Gestionar clientes</a></div>
+<asp:Panel ID="pnlResumenError" runat="server" CssClass="alert alert-danger" Visible="false">No se pudo cargar el resumen de clientes. Inténtelo de nuevo más tarde.</asp:Panel>
+<div class="dashboard-grid">
+<div class="dashboard-column"><section class="cw-card"><div class="section-heading"><div><h5>Directorio de clientes</h5><small class="text-muted">Personas y empresas registradas</small></div><span>↗</span></div><div class="feature-card"><span class="feature-brand">CapitalWest <small>PRO</small></span><div><small>Total de clientes</small><div class="feature-total"><asp:Literal ID="litTotal" runat="server" Mode="Encode" /></div></div><a class="feature-link" href="<%= ResolveUrl("~/Clientes/Clientes.aspx") %>">Ver directorio <span>→</span></a></div><div class="weekly-summary"><div><span>CLIENTES ACTIVOS</span><strong><asp:Literal ID="litActivos" runat="server" Mode="Encode" /></strong></div><span class="pill">Directorio</span></div></section>
+<section class="cw-card"><div class="section-heading"><div><h5>Actividad reciente</h5><small class="text-muted">Últimos clientes registrados</small></div><span>↗</span></div><asp:Literal ID="litActividad" runat="server" /><a class="quick-link" href="<%= ResolveUrl("~/Clientes/Clientes.aspx") %>"><span><strong>Ver todos los clientes</strong></span><span style="margin-left:auto">→</span></a></section></div>
+<section class="cw-card chart-card"><div class="section-heading"><div><h5>Registro de clientes</h5><small class="text-muted">Evolución del directorio</small></div><span>↗</span></div><div class="chart-legend"><span class="pill">Últimos seis meses</span><span>Registros por mes</span></div><asp:Literal ID="litGrafico" runat="server" /><div class="chart-note"><span class="legend-dot"></span> Datos del directorio CapitalWest</div></section>
+<div class="dashboard-column"><section class="cw-card"><div class="section-heading"><div><h5>Cartera de préstamos</h5><small class="text-muted">Resumen financiero</small></div><span>↗</span></div><div class="balance-center"><div class="small-label">Saldo pendiente</div><div class="mini-balance">B/. —</div></div><div class="empty-chart">El resumen estará disponible cuando se registren préstamos.</div><div class="balance-actions"><a class="btn btn-primary" href="<%= ResolveUrl("~/Solicitudes/Solicitudes.aspx") %>">Solicitudes ↗</a><a class="btn btn-outline-primary" href="<%= ResolveUrl("~/Prestamos/Prestamos.aspx") %>">Préstamos ↗</a></div></section>
+<section class="cw-card"><div class="section-heading"><div><h5>Perfiles del directorio</h5><small class="text-muted">Composición de clientes</small></div></div><div class="profile-metrics"><span><strong><asp:Literal ID="litNaturales" runat="server" Mode="Encode" /></strong><small>Naturales</small></span><span><strong><asp:Literal ID="litJuridicos" runat="server" Mode="Encode" /></strong><small>Jurídicas</small></span></div></section>
+<section class="cw-card"><div class="section-heading"><div><h5>Accesos rápidos</h5><small class="text-muted">Continúa tu gestión</small></div></div><a class="quick-link" href="<%= ResolveUrl("~/Clientes/Clientes.aspx") %>"><span class="quick-link-icon">↗</span><span><strong>Clientes</strong><small>Consulta y administra tu directorio</small></span></a><a class="quick-link" href="<%= ResolveUrl("~/Simulador/Simulador.aspx") %>"><span class="quick-link-icon">≋</span><span><strong>Simulador</strong><small>Explora el módulo de simulación</small></span></a></section></div>
+</div></asp:Content>

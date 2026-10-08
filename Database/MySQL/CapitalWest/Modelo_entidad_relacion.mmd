@@ -1,0 +1,240 @@
+erDiagram
+    aplicacionespago {
+        int_11_ PagoId PK
+        int_11_ CuotaId PK
+        int_11_ PrestamoId
+    }
+    auditoria {
+        bigint_20_ Id PK
+        int_11_ UsuarioId
+        bigint_20_ RegistroId
+    }
+    clientes {
+        int_11_ ProvinciaId
+        int_11_ DistritoId
+        int_11_ CorregimientoId
+        int_11_ Id PK
+    }
+    corregimientos {
+        int_11_ Id PK
+        int_11_ DistritoId
+    }
+    cuotas {
+        int_11_ Id PK
+        int_11_ PrestamoId
+    }
+    detallesamortizacionhistorica {
+        bigint_20_ VersionId PK
+        int_11_ NumeroCuota PK
+    }
+    distritos {
+        int_11_ Id PK
+        int_11_ ProvinciaId
+    }
+    ejecucionesreporte {
+        bigint_20_ Id PK
+        int_11_ ReporteId
+        int_11_ UsuarioId
+    }
+    estados {
+        varchar_30_ Codigo PK
+    }
+    estadosciviles {
+        varchar_15_ Codigo PK
+    }
+    formaspago {
+        varchar_20_ Codigo PK
+    }
+    historialprestamos {
+        bigint_20_ Id PK
+        int_11_ PrestamoId
+        int_11_ UsuarioId
+    }
+    historialsolicitudes {
+        bigint_20_ Id PK
+        int_11_ SolicitudId
+        int_11_ UsuarioId
+    }
+    metodoscalculo {
+        int_11_ Id PK
+    }
+    movimientosprestamo {
+        bigint_20_ Id PK
+        int_11_ PrestamoId
+        int_11_ PagoId
+        int_11_ UsuarioId
+        bigint_20_ ReversaDeId
+    }
+    notificaciones {
+        bigint_20_ Id PK
+        int_11_ UsuarioId
+        bigint_20_ RegistroId
+    }
+    pagos {
+        int_11_ Id PK
+        int_11_ PrestamoId
+        int_11_ ClienteId
+    }
+    parametrossistema {
+        varchar_80_ Codigo PK
+    }
+    periodicidades {
+        int_11_ Id PK
+    }
+    permisos {
+        int_11_ Id PK
+    }
+    preferenciasusuario {
+        int_11_ UsuarioId PK
+        varchar_80_ Clave PK
+    }
+    prestamos {
+        int_11_ Id PK
+        int_11_ SolicitudId
+        int_11_ ClienteId
+        int_11_ ProductoId
+        int_11_ MetodoId
+        int_11_ PeriodicidadId
+        int_11_ CapitalizacionId
+    }
+    productometodos {
+        int_11_ ProductoId PK
+        int_11_ MetodoId PK
+    }
+    productoperiodicidades {
+        int_11_ ProductoId PK
+        int_11_ PeriodicidadId PK
+    }
+    productosfinancieros {
+        int_11_ Id PK
+    }
+    provincias {
+        int_11_ Id PK
+    }
+    recuperacionesclave {
+        bigint_20_ Id PK
+        int_11_ UsuarioId
+    }
+    referenciascliente {
+        int_11_ Id PK
+        int_11_ ClienteId
+    }
+    refinanciamientos {
+        int_11_ Id PK
+        int_11_ PrestamoOrigenId
+        int_11_ PrestamoNuevoId
+        int_11_ ClienteId
+    }
+    reportes {
+        int_11_ Id PK
+    }
+    roles {
+        int_11_ Id PK
+    }
+    rolpermisos {
+        int_11_ RolId PK
+        int_11_ PermisoId PK
+    }
+    rolreportes {
+        int_11_ RolId PK
+        int_11_ ReporteId PK
+    }
+    sesionesusuario {
+        bigint_20_ Id PK
+        int_11_ UsuarioId
+    }
+    solicitudes {
+        int_11_ CapitalizacionId
+        int_11_ Id PK
+        int_11_ ClienteId
+        int_11_ ProductoId
+        int_11_ MetodoId
+        int_11_ TasaId
+        int_11_ PeriodicidadId
+    }
+    tasas {
+        int_11_ Id PK
+        int_11_ ProductoId
+        int_11_ CapitalizacionId
+    }
+    tipostasa {
+        varchar_15_ Codigo PK
+    }
+    usuarioroles {
+        int_11_ UsuarioId PK
+        int_11_ RolId PK
+    }
+    usuarios {
+        int_11_ Id PK
+    }
+    versionesamortizacion {
+        bigint_20_ Id PK
+        int_11_ PrestamoId
+        int_11_ UsuarioId
+    }
+    clientes ||--o{ referenciascliente : relaciona
+    clientes ||--o{ solicitudes : relaciona
+    corregimientos |o--o{ clientes : relaciona
+    cuotas ||--o{ aplicacionespago : relaciona
+    distritos |o--o{ clientes : relaciona
+    distritos ||--o{ corregimientos : relaciona
+    estados |o--o{ historialprestamos : relaciona
+    estados |o--o{ historialsolicitudes : relaciona
+    estados ||--o{ prestamos : relaciona
+    estados ||--o{ solicitudes : relaciona
+    estadosciviles ||--o{ clientes : relaciona
+    formaspago ||--o{ pagos : relaciona
+    metodoscalculo ||--o{ productometodos : relaciona
+    movimientosprestamo |o--o{ movimientosprestamo : relaciona
+    pagos ||--o{ aplicacionespago : relaciona
+    pagos |o--o{ movimientosprestamo : relaciona
+    periodicidades ||--o{ prestamos : relaciona
+    periodicidades ||--o{ productoperiodicidades : relaciona
+    periodicidades ||--o{ solicitudes : relaciona
+    periodicidades ||--o{ tasas : relaciona
+    permisos ||--o{ rolpermisos : relaciona
+    prestamos ||--o{ cuotas : relaciona
+    prestamos ||--o{ historialprestamos : relaciona
+    prestamos ||--o{ movimientosprestamo : relaciona
+    prestamos ||--o{ pagos : relaciona
+    prestamos ||--o{ refinanciamientos : relaciona
+    prestamos ||--o{ versionesamortizacion : relaciona
+    productometodos ||--o{ prestamos : relaciona
+    productometodos ||--o{ solicitudes : relaciona
+    productoperiodicidades ||--o{ prestamos : relaciona
+    productoperiodicidades ||--o{ solicitudes : relaciona
+    productosfinancieros ||--o{ productometodos : relaciona
+    productosfinancieros ||--o{ productoperiodicidades : relaciona
+    productosfinancieros ||--o{ tasas : relaciona
+    provincias |o--o{ clientes : relaciona
+    provincias ||--o{ distritos : relaciona
+    reportes ||--o{ ejecucionesreporte : relaciona
+    reportes ||--o{ rolreportes : relaciona
+    roles ||--o{ rolpermisos : relaciona
+    roles ||--o{ rolreportes : relaciona
+    roles ||--o{ usuarioroles : relaciona
+    solicitudes ||--o{ historialsolicitudes : relaciona
+    solicitudes ||--o{ prestamos : relaciona
+    tasas ||--o{ solicitudes : relaciona
+    tipostasa ||--o{ prestamos : relaciona
+    tipostasa ||--o{ solicitudes : relaciona
+    tipostasa ||--o{ tasas : relaciona
+    usuarios |o--o{ auditoria : relaciona
+    usuarios |o--o{ clientes : relaciona
+    usuarios ||--o{ ejecucionesreporte : relaciona
+    usuarios |o--o{ historialprestamos : relaciona
+    usuarios ||--o{ historialsolicitudes : relaciona
+    usuarios |o--o{ movimientosprestamo : relaciona
+    usuarios ||--o{ notificaciones : relaciona
+    usuarios |o--o{ pagos : relaciona
+    usuarios |o--o{ parametrossistema : relaciona
+    usuarios ||--o{ preferenciasusuario : relaciona
+    usuarios |o--o{ prestamos : relaciona
+    usuarios ||--o{ recuperacionesclave : relaciona
+    usuarios ||--o{ refinanciamientos : relaciona
+    usuarios ||--o{ sesionesusuario : relaciona
+    usuarios |o--o{ solicitudes : relaciona
+    usuarios |o--o{ tasas : relaciona
+    usuarios ||--o{ usuarioroles : relaciona
+    usuarios ||--o{ versionesamortizacion : relaciona
+    versionesamortizacion ||--o{ detallesamortizacionhistorica : relaciona

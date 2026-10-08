@@ -1,0 +1,118 @@
+{
+  "servidor": "10.4.32-MariaDB",
+  "importacion": "Correcta",
+  "pruebas": [
+    {
+      "prueba": "40 tablas",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "15 vistas",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "4 roles base",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "5 métodos obligatorios",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "9 estados",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "10 reportes",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Consulta no tiene permisos de escritura",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Cajero puede registrar pagos",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Cuota sin pagos pendiente por 510",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Aplicación completa deja cuota pagada",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Desglose coincide con recibo",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Anulación excluye aplicaciones del saldo",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Abono parcial deja 400",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Movimiento genera saldo acumulado",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Capital negativo rechazado",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Identificación duplicada rechazada",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Rechazo exige motivo",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Aprobación exige importe",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Cancelación exige saldo cero",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Teléfono inválido rechazado",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Pago de otro préstamo rechazado",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Recibo no se puede repetir",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Token vencido antes de creación rechazado",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Auditoría impide edición",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Auditoría impide borrado",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Distritos no pueden referenciar provincia inexistente",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Sin datos de pruebas persistidos",
+      "resultado": "PASÓ"
+    },
+    {
+      "prueba": "Las 15 vistas se pueden consultar",
+      "resultado": "PASÓ"
+    }
+  ]
+}

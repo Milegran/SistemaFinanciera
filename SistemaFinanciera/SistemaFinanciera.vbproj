@@ -146,6 +146,10 @@
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
     <Content Include="Content\Financiera.css" />
+    <Content Include="Content\Stitch.css" />
+    <Content Include="Content\Images\capitalwest.png" />
+    <Content Include="Scripts\CapitalWest.js" />
+    <Content Include="Scripts\StitchClientes.js" />
     <Content Include="Content\Site.css" />
     <Content Include="Default.aspx" />
     <Content Include="EstadosCuenta\EstadosCuenta.aspx" />
@@ -399,6 +403,14 @@
     <ProjectReference Include="..\SistemaFinanciera.Entities\SistemaFinanciera.Entities.vbproj">
       <Project>{80e749c3-38f3-4cfb-9440-cac63888910a}</Project>
       <Name>SistemaFinanciera.Entities</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SistemaFinanciera.BL\SistemaFinanciera.BL.vbproj">
+      <Name>SistemaFinanciera.BL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SistemaFinanciera.DAL\SistemaFinanciera.DAL.vbproj">
+      <Name>SistemaFinanciera.DAL</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>

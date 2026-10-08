@@ -1,5 +1,3 @@
-﻿<%@ Page Title="" Language="vb" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Productos.aspx.vb" Inherits="SistemaFinanciera.Productos" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
-</asp:Content>
+﻿<%@ Page Title="Productos financieros" Language="vb" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Productos.aspx.vb" Inherits="SistemaFinanciera.Productos" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server" />
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server"><div class="page-header"><div><div class="eyebrow">CapitalWest / Gestión</div><h1>Productos financieros</h1><p>Tu información financiera, en un solo lugar.</p></div></div><section class="cw-card"><div class="list-caption"><strong>Productos financieros</strong><small>CapitalWest</small></div><div class="empty-state"><div class="empty-symbol"><svg class="cw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 8V5l14-3v3M21 11h-6v5h6"/><path d="M17 13.5h.01"/></svg></div><h2>Un espacio para seguir creciendo</h2><p>Este módulo estará disponible próximamente. Mientras tanto, puedes registrar y administrar tus clientes.</p><a class="btn btn-primary" href="<%= ResolveUrl("~/Clientes/Clientes.aspx") %>">Ir a clientes</a></div></section></asp:Content>

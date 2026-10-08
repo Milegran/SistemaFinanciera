@@ -1,5 +1,3 @@
-﻿<%@ Page Title="" Language="vb" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Auditoria.aspx.vb" Inherits="SistemaFinanciera.Auditoria" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
-</asp:Content>
-<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
-</asp:Content>
+﻿<%@ Page Title="Auditoría" Language="vb" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Auditoria.aspx.vb" Inherits="SistemaFinanciera.Auditoria" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server" />
+<asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server"><div class="page-header"><div><div class="eyebrow">CapitalWest / Gestión</div><h1>Auditoría</h1><p>Tu información financiera, en un solo lugar.</p></div></div><section class="cw-card"><div class="list-caption"><strong>Auditoría</strong><small>CapitalWest</small></div><div class="empty-state"><div class="empty-symbol"><svg class="cw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></svg></div><h2>Un espacio para seguir creciendo</h2><p>Este módulo estará disponible próximamente. Mientras tanto, puedes registrar y administrar tus clientes.</p><a class="btn btn-primary" href="<%= ResolveUrl("~/Clientes/Clientes.aspx") %>">Ir a clientes</a></div></section></asp:Content>
