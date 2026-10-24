@@ -6,7 +6,7 @@ La aplicación Web Forms utiliza ahora MariaDB/MySQL mediante MySqlConnector 2.6
 
 1. En XAMPP, inicie MySQL. Inicie Apache para abrir phpMyAdmin.
 2. En phpMyAdmin seleccione Importar y el archivo `Database/MySQL/CapitalWest/CapitalWest.sql`, formato SQL, UTF-8. El script crea `capitalwest`.
-3. Importe una sola vez en una base vacía. Si ya importó este mismo archivo y existen sus 40 tablas, no necesita volver a importarlo. El esquema anterior `sistema_financiera` no es el que utiliza esta conexión.
+3. Importe una sola vez en una base vacía. Si ya importó este mismo archivo y existen sus 27 tablas, no necesita volver a importarlo. El esquema anterior `sistema_financiera` no es el que utiliza esta conexión.
 4. Abra `SistemaFinanciera.slnx` en Visual Studio y restaure los paquetes NuGet de la solución. La DAL usa PackageReference para MySqlConnector; el proyecto web conserva sus packages.config existentes. Compile la solución.
 5. Revise la conexión `SistemaFinanciera` en `SistemaFinanciera/Web.config`. Para XAMPP local usa: `Server=127.0.0.1;Port=3306;Database=capitalwest;User ID=root;Password=;Connection Timeout=15;Character Set=utf8mb4`. Cambie puerto, usuario y contraseña si su instalación es diferente. No suba contraseñas reales al repositorio.
 6. Ejecute con IIS Express. El dashboard debe mostrar cero clientes en una base nueva, sin aviso rojo. Registre un cliente para verificar el recorrido completo.
@@ -37,3 +37,7 @@ Si se ve el diseño anterior, recargue con Ctrl + Shift + R. Site.Master incluye
 
 
 Catálogos geográficos obligatorios: consulte [Ubicación]( MySQL/Ubicacion/LEEME.md ). Para una instalación existente importe `ActualizarUbicacion.sql`; el esquema completo se reserva para bases nuevas.
+
+## Esquema simplificado
+
+La versión actual tiene 27 tablas y 15 vistas. Si ya importó la versión anterior de 40 tablas, use la migración descrita en `MySQL/CapitalWest/LEEME.md`; no vuelva a importar el script completo. Los permisos se implementarán por rol en servidor.

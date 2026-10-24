@@ -1,33 +1,28 @@
-# Cobertura de las fuentes
+# Cobertura del esquema simplificado
 
-Fuentes: Proyecto No. 2 DS8.pdf, secciones 3–19, y Diseño detallado de pantallas del Sistema Financiero, pantallas 3.1–10.8. Los requisitos del PDF son obligatorios; las propuestas de las pantallas se mantienen identificadas.
+Fuente obligatoria: Proyecto No. 2 DS8.pdf, secciones 3–19. El Glosario.pdf define los conceptos. Las extensiones del antiguo diseño de pantallas no se tratan como requisitos obligatorios del enunciado.
 
-| Requisito | Fuente | Tablas o vistas |
+Esta tabla indica soporte de datos, no funcionalidad implementada. Actualmente solo clientes y su dashboard están conectados a operaciones reales.
+
+| Requisito | Secciones | Soporte de datos / implementación pendiente |
 |---|---|---|
-| Autenticación, roles y autorización | PDF 11–12; pantallas 3 y 10.1–10.3 | Usuarios, Roles, UsuarioRoles, Permisos, RolPermisos |
-| Bloqueo, recuperación y sesiones | Pantallas 3.1–3.3 | Usuarios, SesionesUsuario, RecuperacionesClave, ParametrosSistema |
-| Clientes, identificación panameña y datos personales | PDF 6; pantallas 5.1–5.3 | Clientes, EstadosCiviles |
-| Empleador, cargo, antigüedad y referencias repetibles | Pantalla 5.2 | Clientes, ReferenciasCliente |
-| Listas territoriales dependientes | Pantallas 5.2 y 10.6 y catálogos recibidos | provincia, distrito, corregimiento; códigos de texto y selectores relacionados |
-| Productos, límites, costos y periodicidades | PDF 3, 5, 7; pantallas 6.1–6.2 | ProductosFinancieros, ProductoMetodos, ProductoPeriodicidades |
-| Tasas, historial y condiciones pactadas | PDF 5, 12; pantallas 6.3 y 7.2 | Tasas, TiposTasa, Solicitudes, Prestamos |
-| Cinco métodos extensibles y documentación | PDF 4, 13, 18–19; pantallas 10.4–10.5 | MetodosCalculo; clases de BL pendientes para ejecución |
-| Solicitud, evaluación, aprobación y rechazo | PDF 7; pantallas 7.1–7.3 | Solicitudes, HistorialSolicitudes |
-| Formalización, fechas, monto, tasa, plazo, gastos y estado | PDF 5, 7, 10; pantallas 7.4–7.6 | Prestamos, Estados, Periodicidades, HistorialPrestamos |
-| Amortización y cambios por abonos anticipados | PDF 4, 8–9; pantallas 7.6–7.8 y 8.1 | Cuotas, VersionesAmortizacion, DetallesAmortizacionHistorica |
-| Recibos, desglose, usuario y anulación | PDF 9; pantallas 8.1–8.3 | Pagos, AplicacionesPago, FormasPago |
-| Estado de cuenta y movimientos | PDF 3, 14; pantallas 5.3 y 8.4 | MovimientosPrestamo, v_Reporte07EstadoCuenta |
-| Cuotas vencidas y mora | PDF 3, 9; pantallas 4.3 y 8.5 | Cuotas, v_SaldosCuota, v_Reporte04PrestamosMora, ParametrosSistema |
-| Refinanciamientos y reestructuración | PDF 3; pantallas 7.9–7.10 | Refinanciamientos, Prestamos, HistorialPrestamos |
-| Los diez reportes y acceso por rol | PDF 14, 19; pantallas 9.1–9.2 | Reportes, RolReportes, EjecucionesReporte, diez vistas v_Reporte01…10 |
-| Operaciones, valores anteriores y nuevos | PDF 3, 12, 15; pantalla 10.8 | Auditoria |
-| Notificaciones y preferencias | Pantallas 2.3 y 4.5 | Notificaciones, PreferenciasUsuario |
-| Configuración de mora, seguridad y evaluación | Pantalla 10.7 | ParametrosSistema |
+| Usuarios, roles y claves con hash | 11–12 | Usuarios, Roles, UsuarioRoles; autenticación/autorización pendientes |
+| Clientes y datos mínimos | 6 | Clientes, EstadosCiviles, ReferenciasCliente; referencias estructuradas pendientes de UI |
+| Ubicación dependiente | 6 | provincia, distrito, corregimiento; catálogos suministrados cargados |
+| Productos y condiciones | 3, 5, 7 | ProductosFinancieros, ProductoMetodos, ProductoPeriodicidades, Tasas, TiposTasa, Periodicidades |
+| Cinco métodos extensibles | 4, 13, 18–19 | MetodosCalculo; cinco algoritmos y abstracción de BL pendientes |
+| Solicitud, evaluación, aprobación/rechazo | 7 | Solicitudes, Estados; transiciones en BL y eventos en Auditoria pendientes |
+| Formalización, desembolso y parámetros | 5, 7, 10 | Prestamos; condiciones contractuales y relaciones con Solicitudes |
+| Amortización y simulación | 4, 8 | Cuotas y MetodosCalculo; la simulación puede calcularse sin persistir |
+| Pago y desglose por cuota | 9 | Pagos, AplicacionesPago, FormasPago; validaciones transaccionales pendientes |
+| Estado de cuenta y saldo | 3, 14 | MovimientosPrestamo y vistas; contabilización desde BL pendiente |
+| Vencimiento y mora | 3, 9 | Cuotas, ParametrosSistema y vistas; reglas de BL pendientes |
+| Refinanciamiento/reestructuración | 3 | Refinanciamientos, Prestamos; nueva obligación vinculada, anterior conservada y motivo en Auditoria |
+| Historial de préstamos por cliente | 3 | Prestamos por ClienteId y vínculo de Refinanciamientos; consulta de aplicación pendiente |
+| Diez reportes | 14 | Diez vistas v_Reporte01…10; interfaz/filtros/permisos en servidor pendientes |
+| Registro de operaciones e historial de estados | 3, 12, 15 | Auditoria; eventos con anterior/nuevo y usuario pendientes |
+| Modelo ER/lógico, diccionario y SQL | 12, 17 | Archivos de esta carpeta, actualizados a 27 tablas |
 
-## Decisiones y alcance
+Los pagos anticipados y la mora tienen escenarios condicionales en la sección 16; el recálculo por abonos anticipados se pospone. Se mantienen datos y vistas para identificar mora, que sí aparece en los objetivos y reportes. La recuperación de claves, notificaciones, preferencias y permisos configurables por acción no son exigencias expresas del PDF.
 
-La base guarda los datos necesarios para las pantallas; no almacena botones, tarjetas o resultados de búsqueda como tablas. Los KPIs se calculan con consultas sobre operaciones reales. Los borradores y la persistencia de simulaciones son opcionales en el documento y no tienen tablas propias: una simulación puede ejecutarse sin guardar un préstamo. El catálogo de métodos contiene fórmulas descriptivas, no código ejecutable.
-
-Se conserva compatibilidad de nombres con el SQL anterior donde ayuda a adaptar la DAL, pero esta base es nueva y no constituye una migración. Las referencias textuales y ubicación textual son campos de transición; sus tablas normalizadas están listas para nuevos formularios. El catálogo territorial se entrega vacío para cargar datos oficiales, evitando una lista incompleta presentada como definitiva.
-
-La base comprueba relaciones y valores de un registro. Edad mínima, referencias obligatorias, catálogo activo, capacidad de pago, tasas superpuestas, cierre de sesiones, orden de aplicación, sobrepagos y transiciones completas dependen de validaciones transaccionales de la aplicación, descritas en LEEME.md.
+La base valida integridad de registros mediante FK, UNIQUE y CHECK. Edad mínima, formatos admitidos de identificación, capacidad de pago, vigencias, sobrepagos, transiciones y contabilización deben implementarse en BL. Véanse las responsabilidades y límites en LEEME.md y las decisiones en Simplificacion.md.

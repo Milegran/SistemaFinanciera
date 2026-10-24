@@ -1,4 +1,5 @@
--- CAPITALWEST · Proyecto No. 2 DS8 + Diseño detallado de pantallas, octubre 2026.
+-- CAPITALWEST · Alcance simplificado del Proyecto No. 2 DS8, octubre 2026.
+-- 27 tablas y 15 vistas. Ver LEEME.md y Simplificacion.md.
 -- Importar en phpMyAdmin, formato SQL, UTF-8. Probado en MariaDB 10.4.32 (XAMPP).
 -- Esquema NUEVO: importar una sola vez en una base vacía. No es una migración.
 -- No elimina ni modifica la base sistema_financiera anterior.
@@ -1195,31 +1196,6 @@ CREATE TABLE Auditoria (
 ) ENGINE=InnoDB;
 
 
-
-CREATE TABLE Permisos (
- Id INT AUTO_INCREMENT PRIMARY KEY, Codigo VARCHAR(80) NOT NULL UNIQUE,
- Modulo VARCHAR(40) NOT NULL, Accion VARCHAR(30) NOT NULL, Descripcion VARCHAR(200) NOT NULL,
- UNIQUE (Modulo,Accion)
-) ENGINE=InnoDB;
-CREATE TABLE RolPermisos (
- RolId INT NOT NULL, PermisoId INT NOT NULL, PRIMARY KEY (RolId,PermisoId),
- FOREIGN KEY (RolId) REFERENCES Roles(Id), FOREIGN KEY (PermisoId) REFERENCES Permisos(Id)
-) ENGINE=InnoDB;
-CREATE TABLE RecuperacionesClave (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, UsuarioId INT NOT NULL,
- TokenHash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
- CreadoUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, VenceUtc DATETIME NOT NULL,
- UsadoUtc DATETIME NULL, FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id),
- CHECK (VenceUtc > CreadoUtc), INDEX (UsuarioId,VenceUtc)
-) ENGINE=InnoDB;
-CREATE TABLE SesionesUsuario (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, UsuarioId INT NOT NULL,
- TokenHash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
- VersionSesion BIGINT NOT NULL, CreadoUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
- UltimaActividadUtc DATETIME NOT NULL, VenceUtc DATETIME NOT NULL, RevocadaUtc DATETIME NULL,
- FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id), CHECK (VersionSesion > 0),
- INDEX (UsuarioId,VenceUtc)
-) ENGINE=InnoDB;
 CREATE TABLE ReferenciasCliente (
  Id INT AUTO_INCREMENT PRIMARY KEY, ClienteId INT NOT NULL,
  Nombre VARCHAR(160) NOT NULL, Parentesco VARCHAR(80) NOT NULL, Telefono VARCHAR(8) NOT NULL,
@@ -1234,37 +1210,6 @@ ALTER TABLE Solicitudes ADD CONSTRAINT fk_sol_periodicidad_producto
  FOREIGN KEY (ProductoId,PeriodicidadId) REFERENCES ProductoPeriodicidades(ProductoId,PeriodicidadId);
 ALTER TABLE Prestamos ADD CONSTRAINT fk_pre_periodicidad_producto
  FOREIGN KEY (ProductoId,PeriodicidadId) REFERENCES ProductoPeriodicidades(ProductoId,PeriodicidadId);
-CREATE TABLE HistorialSolicitudes (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, SolicitudId INT NOT NULL,
- EstadoAnterior VARCHAR(30) NULL, EstadoNuevo VARCHAR(30) NOT NULL,
- FechaUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UsuarioId INT NOT NULL,
- Motivo VARCHAR(1000) NULL,
- FOREIGN KEY (SolicitudId) REFERENCES Solicitudes(Id),
- FOREIGN KEY (EstadoAnterior) REFERENCES Estados(Codigo),
- FOREIGN KEY (EstadoNuevo) REFERENCES Estados(Codigo), FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id)
-) ENGINE=InnoDB;
-CREATE TABLE HistorialPrestamos (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, PrestamoId INT NOT NULL,
- EstadoAnterior VARCHAR(30) NULL, EstadoNuevo VARCHAR(30) NOT NULL,
- FechaUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UsuarioId INT NULL,
- Motivo VARCHAR(1000) NULL,
- FOREIGN KEY (PrestamoId) REFERENCES Prestamos(Id),
- FOREIGN KEY (EstadoAnterior) REFERENCES Estados(Codigo),
- FOREIGN KEY (EstadoNuevo) REFERENCES Estados(Codigo), FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id)
-) ENGINE=InnoDB;
-CREATE TABLE VersionesAmortizacion (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, PrestamoId INT NOT NULL, VersionPlan INT NOT NULL,
- FechaUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UsuarioId INT NOT NULL,
- Motivo VARCHAR(500) NOT NULL, UNIQUE (PrestamoId,VersionPlan),
- FOREIGN KEY (PrestamoId) REFERENCES Prestamos(Id), FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id)
-) ENGINE=InnoDB;
-CREATE TABLE DetallesAmortizacionHistorica (
- VersionId BIGINT NOT NULL, NumeroCuota INT NOT NULL, FechaVencimiento DATE NOT NULL,
- Capital DECIMAL(14,2) NOT NULL, Interes DECIMAL(14,2) NOT NULL,
- InteresCapitalizado DECIMAL(14,2) NOT NULL DEFAULT 0, SaldoProyectado DECIMAL(14,2) NOT NULL,
- PRIMARY KEY (VersionId,NumeroCuota), FOREIGN KEY (VersionId) REFERENCES VersionesAmortizacion(Id),
- CHECK (NumeroCuota > 0 AND Capital >= 0 AND Interes >= 0 AND InteresCapitalizado >= 0 AND SaldoProyectado >= 0)
-) ENGINE=InnoDB;
 CREATE TABLE MovimientosPrestamo (
  Id BIGINT AUTO_INCREMENT PRIMARY KEY, PrestamoId INT NOT NULL, PagoId INT NULL,
  Fecha DATETIME NOT NULL, Tipo VARCHAR(30) NOT NULL, Concepto VARCHAR(200) NOT NULL,
@@ -1284,33 +1229,6 @@ CREATE TABLE ParametrosSistema (
  FOREIGN KEY (ModificadoPor) REFERENCES Usuarios(Id),
  CHECK (TipoDato IN ('ENTERO','DECIMAL','BOOLEANO','TEXTO'))
 ) ENGINE=InnoDB;
-CREATE TABLE PreferenciasUsuario (
- UsuarioId INT NOT NULL, Clave VARCHAR(80) NOT NULL, Valor VARCHAR(500) NOT NULL,
- PRIMARY KEY (UsuarioId,Clave), FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id)
-) ENGINE=InnoDB;
-CREATE TABLE Notificaciones (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, UsuarioId INT NOT NULL, Tipo VARCHAR(40) NOT NULL,
- Titulo VARCHAR(160) NOT NULL, Mensaje VARCHAR(1000) NOT NULL,
- Entidad VARCHAR(60) NULL, RegistroId BIGINT NULL,
- CreadoUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, LeidoUtc DATETIME NULL,
- FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id), INDEX (UsuarioId,LeidoUtc,CreadoUtc)
-) ENGINE=InnoDB;
-CREATE TABLE Reportes (
- Id INT AUTO_INCREMENT PRIMARY KEY, Codigo VARCHAR(40) NOT NULL UNIQUE,
- Nombre VARCHAR(160) NOT NULL, Descripcion VARCHAR(500) NOT NULL,
- VistaSql VARCHAR(100) NOT NULL, Activo BOOLEAN NOT NULL DEFAULT 1, CHECK (Activo IN (0,1))
-) ENGINE=InnoDB;
-CREATE TABLE RolReportes (
- RolId INT NOT NULL, ReporteId INT NOT NULL, PRIMARY KEY (RolId,ReporteId),
- FOREIGN KEY (RolId) REFERENCES Roles(Id), FOREIGN KEY (ReporteId) REFERENCES Reportes(Id)
-) ENGINE=InnoDB;
-CREATE TABLE EjecucionesReporte (
- Id BIGINT AUTO_INCREMENT PRIMARY KEY, ReporteId INT NOT NULL, UsuarioId INT NOT NULL,
- FechaUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FiltrosJson LONGTEXT NULL,
- Formato VARCHAR(10) NOT NULL, FOREIGN KEY (ReporteId) REFERENCES Reportes(Id),
- FOREIGN KEY (UsuarioId) REFERENCES Usuarios(Id), CHECK (Formato IN ('PANTALLA','PDF','CSV','XLSX','IMPRESION'))
-) ENGINE=InnoDB;
-
 INSERT INTO Roles (Codigo,Nombre,EsSistema) VALUES
 ('ADMINISTRADOR','Administrador',1),
 ('OFICIAL_CREDITO','Oficial de crédito',1),
@@ -1369,58 +1287,6 @@ INSERT INTO ParametrosSistema (Codigo,Valor,TipoDato,Descripcion,EsPropuesta) VA
 ('DIAS_GRACIA_MORA','0','ENTERO','Configurar la política de mora.',1),
 ('PERMITIR_SOBREPAGO','0','BOOLEANO','Sin regla explícita, bloquear pagos por encima de la deuda exigible.',0),
 ('BASE_DIAS_ANIO','360','ENTERO','Convención propuesta; confirmar contrato. No usar automáticamente para toda periodicidad.',1);
-INSERT INTO Permisos (Codigo,Modulo,Accion,Descripcion) VALUES
-('CLIENTES.VER','CLIENTES','VER','Clientes / ver'),
-('CLIENTES.CREAR','CLIENTES','CREAR','Clientes / crear'),
-('CLIENTES.EDITAR','CLIENTES','EDITAR','Clientes / editar'),
-('CLIENTES.DESACTIVAR','CLIENTES','DESACTIVAR','Clientes / desactivar'),
-('PRODUCTOS.VER','PRODUCTOS','VER','Productos / ver'),
-('PRODUCTOS.CREAR','PRODUCTOS','CREAR','Productos / crear'),
-('PRODUCTOS.EDITAR','PRODUCTOS','EDITAR','Productos / editar'),
-('PRODUCTOS.DESACTIVAR','PRODUCTOS','DESACTIVAR','Productos / desactivar'),
-('SOLICITUDES.VER','SOLICITUDES','VER','Solicitudes / ver'),
-('SOLICITUDES.CREAR','SOLICITUDES','CREAR','Solicitudes / crear'),
-('SOLICITUDES.EVALUAR','SOLICITUDES','EVALUAR','Solicitudes / evaluar'),
-('SOLICITUDES.APROBAR','SOLICITUDES','APROBAR','Solicitudes / aprobar'),
-('SOLICITUDES.RECHAZAR','SOLICITUDES','RECHAZAR','Solicitudes / rechazar'),
-('PRESTAMOS.VER','PRESTAMOS','VER','Prestamos / ver'),
-('PRESTAMOS.FORMALIZAR','PRESTAMOS','FORMALIZAR','Prestamos / formalizar'),
-('PRESTAMOS.CANCELAR','PRESTAMOS','CANCELAR','Prestamos / cancelar'),
-('PRESTAMOS.REFINANCIAR','PRESTAMOS','REFINANCIAR','Prestamos / refinanciar'),
-('PAGOS.VER','PAGOS','VER','Pagos / ver'),
-('PAGOS.REGISTRAR','PAGOS','REGISTRAR','Pagos / registrar'),
-('PAGOS.ANULAR','PAGOS','ANULAR','Pagos / anular'),
-('ESTADOS_CUENTA.VER','ESTADOS_CUENTA','VER','Estados_Cuenta / ver'),
-('SIMULADOR.USAR','SIMULADOR','USAR','Simulador / usar'),
-('REPORTES.VER','REPORTES','VER','Reportes / ver'),
-('REPORTES.GENERAR','REPORTES','GENERAR','Reportes / generar'),
-('ADMINISTRACION.VER','ADMINISTRACION','VER','Administracion / ver'),
-('ADMINISTRACION.CONFIGURAR','ADMINISTRACION','CONFIGURAR','Administracion / configurar'),
-('USUARIOS.VER','USUARIOS','VER','Usuarios / ver'),
-('USUARIOS.CREAR','USUARIOS','CREAR','Usuarios / crear'),
-('USUARIOS.EDITAR','USUARIOS','EDITAR','Usuarios / editar'),
-('USUARIOS.DESACTIVAR','USUARIOS','DESACTIVAR','Usuarios / desactivar'),
-('AUDITORIA.VER','AUDITORIA','VER','Auditoria / ver');
-INSERT INTO RolPermisos SELECT r.Id,p.Id FROM Roles r CROSS JOIN Permisos p WHERE r.Codigo='ADMINISTRADOR';
-INSERT INTO RolPermisos SELECT r.Id,p.Id FROM Roles r CROSS JOIN Permisos p WHERE r.Codigo='OFICIAL_CREDITO' AND p.Codigo IN ('CLIENTES.VER','CLIENTES.CREAR','CLIENTES.EDITAR','PRODUCTOS.VER','SOLICITUDES.VER','SOLICITUDES.CREAR','PRESTAMOS.VER','PAGOS.VER','ESTADOS_CUENTA.VER','SIMULADOR.USAR','REPORTES.VER','REPORTES.GENERAR');
-INSERT INTO RolPermisos SELECT r.Id,p.Id FROM Roles r CROSS JOIN Permisos p WHERE r.Codigo='CAJERO' AND p.Codigo IN ('CLIENTES.VER','PRESTAMOS.VER','PAGOS.VER','PAGOS.REGISTRAR','PRESTAMOS.CANCELAR','ESTADOS_CUENTA.VER','REPORTES.VER','REPORTES.GENERAR');
-INSERT INTO RolPermisos SELECT r.Id,p.Id FROM Roles r CROSS JOIN Permisos p WHERE r.Codigo='CONSULTA' AND p.Codigo IN ('CLIENTES.VER','PRODUCTOS.VER','SOLICITUDES.VER','PRESTAMOS.VER','PAGOS.VER','ESTADOS_CUENTA.VER','REPORTES.VER','REPORTES.GENERAR');
-INSERT INTO Reportes (Codigo,Nombre,Descripcion,VistaSql) VALUES
-('R01','Listado de clientes','Reporte mínimo 1 del Proyecto No. 2.','v_Reporte01Clientes'),
-('R02','Préstamos vigentes','Reporte mínimo 2 del Proyecto No. 2.','v_Reporte02PrestamosVigentes'),
-('R03','Préstamos cancelados','Reporte mínimo 3 del Proyecto No. 2.','v_Reporte03PrestamosCancelados'),
-('R04','Préstamos en mora','Reporte mínimo 4 del Proyecto No. 2.','v_Reporte04PrestamosMora'),
-('R05','Pagos por período','Reporte mínimo 5 del Proyecto No. 2.','v_Reporte05PagosPeriodo'),
-('R06','Saldos pendientes','Reporte mínimo 6 del Proyecto No. 2.','v_Reporte06SaldosPendientes'),
-('R07','Estado de cuenta','Reporte mínimo 7 del Proyecto No. 2.','v_Reporte07EstadoCuenta'),
-('R08','Tabla de amortización','Reporte mínimo 8 del Proyecto No. 2.','v_Reporte08Amortizacion'),
-('R09','Resumen de cartera','Reporte mínimo 9 del Proyecto No. 2.','v_Reporte09ResumenCartera'),
-('R10','Comparativo de métodos','Reporte mínimo 10 del Proyecto No. 2.','v_Reporte10ComparativoMetodos');
-INSERT INTO RolReportes SELECT r.Id,p.Id FROM Roles r CROSS JOIN Reportes p WHERE r.Codigo='ADMINISTRADOR';
-INSERT INTO RolReportes SELECT r.Id,p.Id FROM Roles r CROSS JOIN Reportes p WHERE r.Codigo='CAJERO' AND p.Codigo IN ('R05','R07','R08');
-INSERT INTO RolReportes SELECT r.Id,p.Id FROM Roles r CROSS JOIN Reportes p WHERE r.Codigo='OFICIAL_CREDITO' AND p.Codigo IN ('R01','R02','R04','R06','R07','R08');
-
-
 CREATE VIEW v_AplicacionesActivas AS
  SELECT a.* FROM AplicacionesPago a JOIN Pagos p ON p.Id=a.PagoId WHERE p.Estado='APLICADO';
 CREATE VIEW v_SaldosCuota AS

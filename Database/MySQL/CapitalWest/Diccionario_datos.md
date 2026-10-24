@@ -89,17 +89,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Mora | decimal(14,2) | NO | 0.00 | — |
 | OtrosCargos | decimal(14,2) | NO | 0.00 | — |
 | SaldoProyectado | decimal(14,2) | NO | — | — |
-## detallesamortizacionhistorica
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| VersionId | bigint(20) | NO | — | PRI |
-| NumeroCuota | int(11) | NO | — | PRI |
-| FechaVencimiento | date | NO | — | — |
-| Capital | decimal(14,2) | NO | — | — |
-| Interes | decimal(14,2) | NO | — | — |
-| InteresCapitalizado | decimal(14,2) | NO | 0.00 | — |
-| SaldoProyectado | decimal(14,2) | NO | — | — |
 ## distrito
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -108,16 +97,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | codigo_distrito | varchar(4) | NO | — | PRI |
 | codigo | varchar(2) | NO | — | — |
 | nombre_distrito | varchar(150) | NO | — | — |
-## ejecucionesreporte
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| ReporteId | int(11) | NO | — | MUL |
-| UsuarioId | int(11) | NO | — | MUL |
-| FechaUtc | datetime | NO | current_timestamp() | — |
-| FiltrosJson | longtext | YES | NULL | — |
-| Formato | varchar(10) | NO | — | — |
 ## estados
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -140,28 +119,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Codigo | varchar(20) | NO | — | PRI |
 | Nombre | varchar(80) | NO | — | — |
 | Activo | tinyint(1) | NO | 1 | — |
-## historialprestamos
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| PrestamoId | int(11) | NO | — | MUL |
-| EstadoAnterior | varchar(30) | YES | NULL | MUL |
-| EstadoNuevo | varchar(30) | NO | — | MUL |
-| FechaUtc | datetime | NO | current_timestamp() | — |
-| UsuarioId | int(11) | YES | NULL | MUL |
-| Motivo | varchar(1000) | YES | NULL | — |
-## historialsolicitudes
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| SolicitudId | int(11) | NO | — | MUL |
-| EstadoAnterior | varchar(30) | YES | NULL | MUL |
-| EstadoNuevo | varchar(30) | NO | — | MUL |
-| FechaUtc | datetime | NO | current_timestamp() | — |
-| UsuarioId | int(11) | NO | — | MUL |
-| Motivo | varchar(1000) | YES | NULL | — |
 ## metodoscalculo
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -190,19 +147,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Credito | decimal(14,2) | NO | 0.00 | — |
 | UsuarioId | int(11) | YES | NULL | MUL |
 | ReversaDeId | bigint(20) | YES | NULL | UNI |
-## notificaciones
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| UsuarioId | int(11) | NO | — | MUL |
-| Tipo | varchar(40) | NO | — | — |
-| Titulo | varchar(160) | NO | — | — |
-| Mensaje | varchar(1000) | NO | — | — |
-| Entidad | varchar(60) | YES | NULL | — |
-| RegistroId | bigint(20) | YES | NULL | — |
-| CreadoUtc | datetime | NO | current_timestamp() | — |
-| LeidoUtc | datetime | YES | NULL | — |
 ## pagos
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -246,22 +190,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Unidad | varchar(10) | NO | — | — |
 | Intervalo | int(11) | NO | — | — |
 | PeriodosPorAnio | decimal(10,4) | NO | — | — |
-## permisos
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | int(11) | NO | — | PRI |
-| Codigo | varchar(80) | NO | — | UNI |
-| Modulo | varchar(40) | NO | — | MUL |
-| Accion | varchar(30) | NO | — | — |
-| Descripcion | varchar(200) | NO | — | — |
-## preferenciasusuario
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| UsuarioId | int(11) | NO | — | PRI |
-| Clave | varchar(80) | NO | — | PRI |
-| Valor | varchar(500) | NO | — | — |
 ## prestamos
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -332,16 +260,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 |---|---|---|---|---|
 | codigo_provincia | varchar(2) | NO | — | PRI |
 | nombre_provincia | varchar(50) | NO | — | — |
-## recuperacionesclave
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| UsuarioId | int(11) | NO | — | MUL |
-| TokenHash | char(64) | NO | — | UNI |
-| CreadoUtc | datetime | NO | current_timestamp() | — |
-| VenceUtc | datetime | NO | — | — |
-| UsadoUtc | datetime | YES | NULL | — |
 ## referenciascliente
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -367,16 +285,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | SaldoTransferido | decimal(14,2) | NO | — | — |
 | Motivo | varchar(1000) | NO | — | — |
 | RegistradoPor | int(11) | NO | — | MUL |
-## reportes
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | int(11) | NO | — | PRI |
-| Codigo | varchar(40) | NO | — | UNI |
-| Nombre | varchar(160) | NO | — | — |
-| Descripcion | varchar(500) | NO | — | — |
-| VistaSql | varchar(100) | NO | — | — |
-| Activo | tinyint(1) | NO | 1 | — |
 ## roles
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -386,30 +294,6 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | Id | int(11) | NO | — | PRI |
 | Codigo | varchar(30) | NO | — | UNI |
 | Nombre | varchar(80) | NO | — | — |
-## rolpermisos
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| RolId | int(11) | NO | — | PRI |
-| PermisoId | int(11) | NO | — | PRI |
-## rolreportes
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| RolId | int(11) | NO | — | PRI |
-| ReporteId | int(11) | NO | — | PRI |
-## sesionesusuario
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| UsuarioId | int(11) | NO | — | MUL |
-| TokenHash | char(64) | NO | — | UNI |
-| VersionSesion | bigint(20) | NO | — | — |
-| CreadoUtc | datetime | NO | current_timestamp() | — |
-| UltimaActividadUtc | datetime | NO | — | — |
-| VenceUtc | datetime | NO | — | — |
-| RevocadaUtc | datetime | YES | NULL | — |
 ## solicitudes
 
 | Campo | Tipo | Acepta NULL | Valor inicial | Clave |
@@ -486,13 +370,3 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | ContrasenaHash | varchar(255) | NO | — | — |
 | Activo | tinyint(1) | NO | 1 | — |
 | CreadoUtc | datetime | NO | current_timestamp() | — |
-## versionesamortizacion
-
-| Campo | Tipo | Acepta NULL | Valor inicial | Clave |
-|---|---|---|---|---|
-| Id | bigint(20) | NO | — | PRI |
-| PrestamoId | int(11) | NO | — | MUL |
-| VersionPlan | int(11) | NO | — | — |
-| FechaUtc | datetime | NO | current_timestamp() | — |
-| UsuarioId | int(11) | NO | — | MUL |
-| Motivo | varchar(500) | NO | — | — |

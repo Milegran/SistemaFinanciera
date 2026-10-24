@@ -1,79 +1,68 @@
 # Base de datos CapitalWest
 
-Diseñada a partir de **Proyecto No. 2 DS8.pdf** y **Diseno_de_pantallas_Sistema_Financiero (1).docx**, entregados por el usuario. El enunciado determina los requisitos obligatorios. El documento de pantallas completa los datos y propone algunas reglas; esas propuestas se identifican en ParametrosSistema.EsPropuesta.
+Esquema simplificado para el Proyecto No. 2 DS8: **27 tablas, 15 vistas y dos triggers de protección de auditoría**. MariaDB 10.4.32 de XAMPP; aplicación Web Forms VB/.NET Framework 4.8 con MySqlConnector.
 
-## Importación en phpMyAdmin
+## Instalación nueva
 
-1. Inicie MySQL desde XAMPP y abra phpMyAdmin.
-2. Seleccione **Importar**, el archivo **CapitalWest.sql**, formato SQL y codificación UTF-8.
-3. Ejecute la importación. El archivo crea la base **capitalwest** con 40 tablas, 15 vistas y dos triggers que protegen la auditoría.
-4. Compruebe que aparecen los cuatro roles, cinco métodos de cálculo, nueve estados y diez reportes.
+1. Inicie MySQL en XAMPP y abra phpMyAdmin.
+2. Importe `CapitalWest.sql` con UTF-8 en una instalación donde capitalwest aún no exista o no tenga objetos.
+3. El script crea capitalwest y carga roles, estados, métodos, periodicidades, tipos de tasa, formas de pago, parámetros y ubicación.
+4. Configure la conexión SistemaFinanciera de Web.config; la configuración local predeterminada apunta a 127.0.0.1:3306/capitalwest.
+5. Compile la solución y ejecute `Tests/ProbarClientes.ps1` desde PowerShell.
 
-Importe una sola vez en una base vacía. El archivo no contiene instrucciones para borrar bases ni tablas. No es una migración: no lo importe sobre tablas existentes. Si ya tiene una base capitalwest con datos, use una migración preparada para ese esquema, o cambie CREATE DATABASE y USE a un nombre nuevo. El script anterior SistemaFinanciera.sql se conserva como versión anterior.
+No importe el script completo sobre una instalación existente. No es una migración ni una operación idempotente.
 
-Validado mediante importación real en **MariaDB 10.4.32 de XAMPP**. Utiliza InnoDB, claves foráneas, restricciones CHECK, UTF-8 y DECIMAL para importes. No se ha ejecutado en MySQL; para MySQL se requiere como mínimo 8.0.16 por CHECK y funciones de ventana. Cada conexión de la aplicación debe usar SET time_zone='+00:00'. Las fechas de vencimiento son fechas civiles de Panamá; las columnas Utc se guardan en UTC. Las vistas de mora usan la fecha de Panamá con UTC menos cinco horas.
+## Instalación anterior de 40 tablas
 
-## Archivos
+Realice un respaldo completo con mysqldump, incluidos triggers y rutinas. Ejecute una sola vez `Migrar_a_esquema_simplificado.sql`. Comprueba que las nueve tablas operativas que se retiran estén vacías antes de eliminar cualquiera de las 13 tablas auxiliares. Si encuentra datos, detiene la migración y debe prepararse su traslado antes de continuar. Los catálogos de permisos/reportes y sus asignaciones se retiran con esta versión; el respaldo conserva esa configuración.
 
-- CapitalWest.sql: creación, catálogos, permisos, vistas y protección de auditoría.
-- Diccionario_datos.md: campos, tipos, valores iniciales, obligatoriedad y claves, obtenidos desde la base importada.
-- Modelo_logico.md: todas las claves foráneas, incluidos vínculos compuestos.
-- Modelo_entidad_relacion.mmd: diagrama Mermaid. Resume relaciones por pareja de tablas; las restricciones UNIQUE y las relaciones compuestas se detallan en el SQL y el modelo lógico.
-- Cobertura_requisitos.md: correspondencia con las dos fuentes y decisiones del modelo.
-- Validacion.json: resultados de 28 comprobaciones y versión del servidor utilizado.
+MariaDB confirma DDL implícitamente; los DROP TABLE no se revierten con ROLLBACK. Si ocurre un fallo parcial, restaure el respaldo o revise los objetos restantes antes de reintentar. La rutina de migración puede quedar creada tras un error: diagnostique la causa antes de retirarla. No deshabilite claves foráneas para forzar la ejecución.
 
-## Datos incluidos
+La instalación local del usuario ya se migró y validó el 23 de octubre de 2026. No necesita volver a ejecutar el script de migración.
 
-Catálogos de roles, estados, métodos, periodicidades, tipos de tasa, formas de pago, estados civiles, permisos, reportes y parámetros. No incluye usuarios de acceso, contraseñas, clientes, productos ni préstamos de ejemplo. Cree el primer administrador desde un proceso de alta que calcule un hash seguro y le asigne ADMINISTRADOR en UsuarioRoles.
+## Tablas conservadas
 
-Los catálogos suministrados ya están cargados en `provincia`, `distrito` y `corregimiento`: 13 provincias, 82 distritos y 668 corregimientos. El formulario utiliza listas dependientes y guarda los códigos de texto originales, incluidos los ceros iniciales. Los nombres de ubicación del cliente se obtienen del catálogo. BRILLANTE (130601) se conserva sin habilitar porque falta su distrito 1306. Para actualizar una instalación existente, consulte `../Ubicacion/LEEME.md`.
+| Área | Tablas |
+|---|---|
+| Ubicación (3) | provincia, distrito, corregimiento |
+| Acceso (3) | Usuarios, Roles, UsuarioRoles |
+| Clientes (2) | Clientes, ReferenciasCliente |
+| Catálogos (5) | EstadosCiviles, TiposTasa, FormasPago, MetodosCalculo, Estados |
+| Productos y condiciones (5) | ProductosFinancieros, ProductoMetodos, Periodicidades, ProductoPeriodicidades, Tasas |
+| Ciclo financiero (7) | Solicitudes, Prestamos, Cuotas, Pagos, AplicacionesPago, Refinanciamientos, MovimientosPrestamo |
+| Control (2) | Auditoria, ParametrosSistema |
 
-ReferenciasCliente permite varias referencias por cliente; Referencias en Clientes conserva el texto del módulo actual. Empleador, Cargo y AntiguedadMeses complementan Ocupacion. RucDv permite separar el dígito verificador. La edad mínima, formatos de cédula/RUC, correo y al menos una referencia se validan en la lógica de negocio al guardar el conjunto completo.
+Las 15 vistas son consultas guardadas; diez corresponden a los reportes obligatorios. Conservarlas evita repetir consultas complejas y no añade tablas de almacenamiento.
 
-## Condiciones financieras e historial
+## Responsabilidades de la aplicación
 
-PlazoMeses es el plazo contractual del diseño; CantidadCuotas es independiente y debe calcularse según la periodicidad. Los límites PlazoMinimo/PlazoMaximo existentes representan cantidad de cuotas; los nuevos límites con sufijo Meses representan el plazo en meses. La BL debe comprobar ambos.
+- Autenticar usuarios y almacenar contraseñas con un algoritmo especializado con sal y parámetros. No se incluyen usuarios ni claves de ejemplo.
+- Autorizar en servidor según Roles/UsuarioRoles. Ya no hay permisos configurables por acción ni por reporte; la matriz inicial está en Simplificacion.md. Las sesiones usarán la infraestructura de ASP.NET cuando se implemente autenticación. Recuperación de claves queda fuera del alcance actual.
+- Registrar operaciones importantes y cambios de estado en Auditoria, con usuario, entidad, registro y detalle anterior/nuevo. Los triggers impiden editar/borrar eventos; no los generan. La auditoría será la fuente del historial de cambios de estado, mientras el historial de préstamos de un cliente se consulta desde Prestamos y Refinanciamientos.
+- Las cinco implementaciones de cálculo siguen pendientes de BL. Las fórmulas descriptivas de MetodosCalculo no son algoritmos ejecutables.
+- Formalizar, pagar, cancelar y refinanciar mediante transacciones y bloqueo del préstamo/solicitud antes de validar saldos o transiciones.
+- Comprobar producto/cliente activos, límites, tasa vigente, método y periodicidad permitidos; guardar copia contractual en Prestamos.
+- Aplicar pagos a cuotas mediante AplicacionesPago; impedir sobrepagos sin regla explícita. Registrar recibo, aplicaciones, saldo, movimientos y auditoría en la misma transacción. ClaveIdempotencia evita duplicar recibos si la aplicación la usa correctamente.
+- Definir prioridad de mora/interés/capital y otros cargos, redondeo, conversión de tasa, capitalización y calendario. No hay tasa de mora obligatoria en el enunciado.
+- SaldoCapital es capital real pendiente; los intereses futuros del plan no son importe de liquidación anticipada. MovimientosPrestamo debe registrar todos los débitos/créditos y sus reversas para que el estado de cuenta sea correcto.
+- Los pagos anticipados con recálculo de la misma obligación quedan pospuestos. Para refinanciamiento o reestructuración, crear un nuevo préstamo vinculado en Refinanciamientos y conservar el anterior y sus cuotas; registrar el motivo en auditoría. No sobrescribir planes con pagos. VersionPlan permanece como campo compatible, sin repositorio de versiones históricas.
+- Los reportes se consultarán con filtros parametrizados, autorización por rol y evento en auditoría cuando corresponda. No hay catálogo ni historial separado de ejecuciones de reportes.
 
-TasaPactada y TipoTasa en Solicitudes guardan las condiciones pedidas. Prestamos guarda una copia contractual completa de tasa, capitalización, costos y plazo. Cambiar el catálogo Tasas no cambia los contratos. EsPredeterminada debe mantenerse de forma transaccional para que solo haya una tasa predeterminada vigente por producto. La BL debe impedir intervalos de vigencia superpuestos cuando corresponda.
+## Clientes y ubicación
 
-Cuotas contiene la amortización actual. VersionesAmortizacion y DetallesAmortizacionHistorica conservan versiones anteriores al recalcular por un abono anticipado. Antes de cambiar cuotas se guarda el plan anterior, conservando las cuotas que ya tienen aplicaciones. InteresCapitalizado es interés incorporado al capital, separado del interés cobrado. Los cinco métodos se implementan en clases de la BL; guardar su fórmula en MetodosCalculo no ejecuta esos algoritmos.
+Se conserva la compatibilidad con ClienteServicio y ClienteRepositorio: todas las columnas utilizadas por la aplicación mantienen nombres/tipos y se conservan los CHECK, UNIQUE y FK existentes. Version es BIGINT UNSIGNED de concurrencia; la UI conserva su token de ocho bytes.
 
-La periodicidad QUINCENAL inicial significa intervalos de 15 días y 24 periodos contractuales por año bajo la convención de 360 días propuesta. No equivale automáticamente a dos fechas fijas por mes. Confirme la convención del contrato, la conversión de tasa y las fechas del plan antes de generar cuotas.
+Hay 13 provincias, 82 distritos y 668 corregimientos suministrados. Los códigos son texto y preservan ceros iniciales. BRILLANTE (130601) permanece fuera del selector sin distrito válido. Los datos suministrados no se certifican como catálogo oficial vigente. Para su actualización consulte `../Ubicacion/LEEME.md`.
 
-SaldoCapital es saldo contable real; SaldoProyectado es saldo del plan. InteresesProgramadosPendientes incluye intereses futuros del calendario: no es interés devengado ni el importe de cancelación anticipada. No use esa columna como liquidación a la fecha.
+ReferenciasCliente admite referencias estructuradas; el formulario actual conserva Referencias como texto. Empleador, Cargo, AntiguedadMeses y RucDv están preparados en SQL, pero no conectados al formulario. Los problemas de validación identificados en docs/Revision_requisitos_2026-10-23.md no se corrigen mediante esta simplificación.
 
-AplicacionesPago registra varias cuotas por recibo y varios abonos por cuota. Las claves compuestas impiden aplicar pagos a cuotas de otro préstamo. Las vistas excluyen pagos anulados del saldo por cuota. v_PagosDesglosados muestra DiferenciaAplicacion para comprobar que el recibo coincide con el desglose.
+Cada conexión configura UTC. Las fechas civiles son de Panamá. La periodicidad QUINCENAL del catálogo significa 15 días; confirme la convención contractual y no la confunda automáticamente con dos fechas fijas al mes.
 
-MovimientosPrestamo alimenta el estado de cuenta mediante débitos y créditos y saldo acumulado. El saldo depende de que la BL contabilice todos los desembolsos, intereses devengados, mora, cargos, pagos y reversas, una sola vez. No se genera automáticamente al insertar un recibo. Las reversas conservan el movimiento original y ReversaDeId impide revertirlo dos veces.
+## Documentación y verificación
 
-## Operaciones que debe ejecutar la aplicación
+- `Simplificacion.md`: decisiones, tablas retiradas y matriz de acceso propuesta.
+- `Cobertura_requisitos.md`: correspondencia con el enunciado.
+- `Diccionario_datos.md`, `Modelo_logico.md`, `Modelo_entidad_relacion.mmd`: esquema reducido, tipos y relaciones.
+- `Validacion.json`: resultados actuales y resultados históricos identificados por separado.
 
-Las restricciones de esta base no sustituyen las transacciones de negocio. Formalizar, pagar, cancelar y refinanciar deben usar BEGIN/COMMIT y SELECT ... FOR UPDATE sobre el préstamo o solicitud antes de validar:
-
-- Formalizar solo una solicitud aprobada, con cliente/producto activos, condiciones válidas y permisos. SolicitudId único impide formalizar dos veces.
-- Verificar monto contra límites, métodos/periodicidades permitidos, tasas vigentes y datos evaluados. La aprobación y el rechazo requieren sus datos mínimos.
-- Al registrar un pago, bloquear el préstamo, calcular la deuda exigible, impedir sobrepagos, comprobar el desglose y la prioridad mora → intereses → capital. Definir explícitamente el tratamiento de otros cargos. Insertar recibo y aplicaciones, actualizar SaldoCapital, movimientos, estado, historial y auditoría en la misma transacción. ClaveIdempotencia única permite evitar repetir una solicitud de pago; la aplicación la genera.
-- Calcular mora con tasa y gracia configuradas; no hay una tasa obligatoria en el enunciado. Cambiar el estado al detectar o saldar cuotas vencidas.
-- Liquidar anticipadamente con el interés devengado según el método, registrar el pago, dejar saldo cero y fecha de cancelación. No cobrar automáticamente todo el interés futuro.
-- Refinanciar solo préstamos vigentes o en mora; verificar mismo cliente, marcar el original, crear el contrato nuevo y transferir el desglose de deuda sin duplicar ingresos o desembolsos. La suma del desglose se comprueba en la tabla.
-- Anular pagos solo con permiso, motivo y fecha; revertir saldos y movimientos en la misma transacción. No borrar el recibo ni la auditoría.
-- Registrar auditoría y los historiales con usuario autenticado; los triggers impiden editar/borrar Auditoria, pero no insertan eventos automáticamente. No almacenar contraseñas ni tokens sin hash en detalles.
-
-Los permisos de rol son datos para la autorización en servidor. No basta ocultar botones. CONSULTA tiene permisos de lectura/generación; sus reportes específicos no se habilitan por defecto hasta que un administrador los autorice en RolReportes. EVALUAR/APROBAR/RECHAZAR se asigna inicialmente al Administrador como propone el documento, y puede delegarse mediante RolPermisos. Proteja los roles y estados EsSistema y no permita que el último administrador se desactive.
-
-Los tokens de recuperación/sesión se almacenan como hash SHA-256 del token aleatorio; las contraseñas usan un algoritmo especializado para contraseñas con sal y parámetros. Al cambiar la clave, incremente VersionSesion y revoque sesiones. La comprobación de vencimiento y uso único corresponde a la BL.
-
-## Conexión del proyecto actual
-
-El módulo de clientes y el dashboard utilizan MySqlConnector y la base `capitalwest` de MariaDB/MySQL. La conexión predeterminada usa 127.0.0.1:3306 y usuario root para XAMPP local. Consulte Database/README.md para importar la base, restaurar NuGet y configurar cada equipo.
-
-Version es un contador numérico de concurrencia que la DAL incrementa al actualizar, comprobando las filas afectadas. La interfaz conserva su token de ocho bytes. Los datos de LocalDB no se transfieren automáticamente; 001_Clientes.sql es histórico.
-
-La migración del módulo existente no implementa todavía las operaciones financieras de los otros módulos.
-
-## Verificación
-
-La importación y las 28 pruebas SQL se ejecutaron en una instancia aislada, distinta del servicio MySQL habitual. La base entregada solo contiene catálogos. Además pasaron 42 comprobaciones de clientes mediante BL/DAL, incluida la conexión MariaDB y la jerarquía territorial; los datos de prueba fueron revertidos. Se comprobó la migración repetida y la conservación de clientes anteriores. Las pruebas SQL cubren estructura, permisos, referencias, valores inválidos, pagos completos/parciales, anulación, estado de cuenta y auditoría inmutable; no prueban los cinco algoritmos financieros pendientes de implementación.
-
-
-Catálogos geográficos obligatorios: consulte [Ubicación]( ../Ubicacion/LEEME.md ). Para una instalación existente importe `ActualizarUbicacion.sql`; el esquema completo se reserva para bases nuevas.
+La versión reducida se importó sin errores en una base aislada y pasó 42 pruebas de clientes. Después se migró capitalwest y pasaron de nuevo las 42 pruebas; los datos de prueba se revirtieron. Las 15 vistas se consultaron sin errores. No son pruebas de cálculos financieros ni de interfaz visual.

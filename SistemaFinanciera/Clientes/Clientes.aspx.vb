@@ -6,6 +6,16 @@ Imports SistemaFinanciera.DAL
 
 Public Class Clientes
     Inherits System.Web.UI.Page
+    Public ReadOnly Property ReglasClienteJson As String
+        Get
+            Return New System.Web.Script.Serialization.JavaScriptSerializer().Serialize(New With {
+                .nombre = ClienteServicio.PatronNombre, .cedula = ClienteServicio.PatronCedula,
+                .pasaporte = ClienteServicio.PatronPasaporte, .ruc = ClienteServicio.PatronRuc,
+                .telefono = ClienteServicio.PatronTelefono,
+                .fechaMaxima = ClienteServicio.HoyPanama.ToString("yyyy-MM-dd"),
+                .fechaMinima = ClienteServicio.HoyPanama.AddYears(-120).ToString("yyyy-MM-dd")})
+        End Get
+    End Property
     Private ReadOnly Property Servicio As ClienteServicio
         Get
             Dim config = ConfigurationManager.ConnectionStrings("SistemaFinanciera")
@@ -22,6 +32,8 @@ Public Class Clientes
         End Set
     End Property
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        txtFechaNacimiento.Attributes("min") = ClienteServicio.HoyPanama.AddYears(-120).ToString("yyyy-MM-dd")
+        txtFechaNacimiento.Attributes("max") = ClienteServicio.HoyPanama.ToString("yyyy-MM-dd")
         pnlMensaje.Visible = False
         pnlErrorFormulario.Visible = False
         If Not IsPostBack Then
@@ -130,10 +142,15 @@ Public Class Clientes
     End Sub
     Private Sub ActualizarTipoPersona()
         Dim natural = ddlTipoPersona.SelectedValue <> "JURIDICA"
+        For Each opcion As ListItem In ddlTipoIdentificacion.Items
+            opcion.Enabled = opcion.Value = "" OrElse If(natural, opcion.Value <> "RUC", opcion.Value = "RUC")
+        Next
         txtApellidos.Enabled = natural
         txtFechaNacimiento.Enabled = natural
         ddlSexo.Enabled = natural
         ddlEstadoCivil.Enabled = natural
+        ddlSexo.Items.FindByValue("NO_APLICA").Enabled = Not natural
+        ddlEstadoCivil.Items.FindByValue("NO_APLICA").Enabled = Not natural
         If Not natural Then
             ddlTipoIdentificacion.SelectedValue = "RUC"
             txtApellidos.Text = ""
@@ -141,6 +158,7 @@ Public Class Clientes
             ddlSexo.SelectedValue = "NO_APLICA"
             ddlEstadoCivil.SelectedValue = "NO_APLICA"
         Else
+            If ddlTipoIdentificacion.SelectedValue = "RUC" Then ddlTipoIdentificacion.SelectedValue = "CEDULA"
             If ddlSexo.SelectedValue = "NO_APLICA" Then ddlSexo.SelectedValue = ""
             If ddlEstadoCivil.SelectedValue = "NO_APLICA" Then ddlEstadoCivil.SelectedValue = ""
         End If

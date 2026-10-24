@@ -33,6 +33,52 @@ public class PruebasClientes : MarshalByRefObject {
     public static void Ejecutar(string conexion) {
         var c=ClienteValido(); Check(ClienteServicio.Validar(c).Count==0,"Cliente natural válido con centavos");
         Check(c.Telefono=="60000000","Normalización del teléfono +507");
+        Invalido(x=>x.Nombres="123123123", "Rechaza nombres numéricos de la captura");
+        Invalido(x=>x.Apellidos="123333333", "Rechaza apellidos numéricos de la captura");
+        Invalido(x=>x.Nombres="Ana1", "Rechaza números mezclados en nombre natural");
+        Invalido(x=>x.Nombres="Ana@@", "Rechaza símbolos en nombre natural");
+        c=ClienteValido(); c.Nombres="María José"; c.Apellidos="O’Neill Pérez-Gómez";
+        Check(ClienteServicio.Validar(c).Count==0,"Admite acentos, apóstrofos y apellidos compuestos");
+        c=ClienteValido(); c.Nombres="Jose\u0301";
+        Check(ClienteServicio.Validar(c).Count==0 && c.Nombres=="José", "Normaliza acentos Unicode");
+        Invalido(x=>x.TipoPersona="OTRA", "Tipo de persona fuera de catálogo");
+        Invalido(x=>x.TipoIdentificacion="OTRO", "Documento fuera de catálogo");
+        Invalido(x=>{x.TipoIdentificacion="RUC";x.Identificacion="12345-1-123456";}, "Natural con RUC rechazado antes de SQL");
+        Invalido(x=>x.Identificacion="ABC-0-0", "Prefijo arbitrario de cédula rechazado");
+        Invalido(x=>x.Identificacion="asdasdaewrfawdasd", "Identificación de la captura rechazada");
+        c=ClienteValido(); c.Identificacion="E-123-456";
+        Check(ClienteServicio.Validar(c).Count==0,"Prefijo E admitido");
+        Invalido(x=>{x.TipoPersona="JURIDICA";x.TipoIdentificacion="RUC";x.Identificacion="A";}, "RUC de una letra rechazado");
+        Invalido(x=>{x.TipoPersona="JURIDICA";x.TipoIdentificacion="RUC";x.Identificacion="12345-1-123456";x.Nombres="12345";}, "Razón social solo numérica rechazada");
+        c=ClienteValido(); c.TipoPersona="JURIDICA";c.TipoIdentificacion="RUC";c.Identificacion="12345-1-123456";c.Nombres="Comercial 123, S.A. & Hijos";
+        Check(ClienteServicio.Validar(c).Count==0 && c.Apellidos=="", "Razón social admite números y signos; datos personales no aplican");
+        Invalido(x=>x.Telefono="0000000", "Teléfono de ceros rechazado");
+        Invalido(x=>x.Telefono="6000ABCD", "Teléfono con letras rechazado");
+        Invalido(x=>x.Sexo="NO_APLICA", "No aplica rechazado para sexo de natural");
+        Invalido(x=>x.EstadoCivil="NO_APLICA", "No aplica rechazado para estado civil de natural");
+        Invalido(x=>x.FechaNacimiento=ClienteServicio.HoyPanama.AddYears(-120).AddDays(-1), "Nacimiento fuera del rango");
+        Invalido(x=>x.Direccion="12345", "Dirección sin descripción rechazada");
+        Invalido(x=>x.Ocupacion="12345", "Ocupación sin descripción rechazada");
+        Invalido(x=>x.Referencias="x", "Referencia incompleta rechazada");
+        Invalido(x=>x.Referencias="Ana, 123, familiar", "Teléfono de referencia inválido");
+        Invalido(x=>x.Referencias="60000001", "Referencia sin nombre rechazada");
+        Invalido(x=>x.Referencias="Ana, 00000000", "Referencia con teléfono de ceros rechazada");
+        Invalido(x=>x.Referencias="Ana, 123456789", "No acepta fragmento de teléfono demasiado largo");
+        foreach(var referencia in new[]{"Ana Pérez\n6718-9025\nVecina", "Teléfono: +507 6718-9025; Nombre: Ana Pérez (vecina)", "Ana Pérez 6718-9025", "Ana Pérez\r\n\r\n6718-9025\r\nVecina"}) {
+            c=ClienteValido();c.Referencias=referencia;
+            Check(ClienteServicio.Validar(c).Count==0,"Referencia en formato libre: " + referencia.Replace("\n"," / "));
+        }
+        c=ClienteValido();c.Referencias="Ana Pérez, +507 6000-0001, familiar\nJosé Gómez, 200-0001, compañero";
+        Check(ClienteServicio.Validar(c).Count==0,"Varias referencias válidas por línea");
+        Invalido(x=>x.Direccion="Calle <script>", "Símbolos de marcado rechazados");
+        Invalido(x=>x.Ocupacion="Analista\u0000", "Caracteres de control rechazados");
+        foreach(var propiedad in new[]{"Identificacion","Nombres","Apellidos","Correo","Direccion","Provincia","Distrito","Corregimiento","Ocupacion","Referencias"}) {
+            var limites=new[]{30,120,120,254,300,80,150,150,200,1000};
+            var nombres=new[]{"Identificacion","Nombres","Apellidos","Correo","Direccion","Provincia","Distrito","Corregimiento","Ocupacion","Referencias"};
+            int limite=limites[Array.IndexOf(nombres,propiedad)];
+            Invalido(x=>typeof(Cliente).GetProperty(propiedad).SetValue(x,new string('a',limite+1),null),"Límite de " + propiedad);
+            Invalido(x=>typeof(Cliente).GetProperty(propiedad).SetValue(x,"",null),"Obligatoriedad de " + propiedad);
+        }
         Invalido(x=>x.Ingresos=-1m,"Ingresos negativos");
         Invalido(x=>x.Ingresos=1.001m,"Más de dos decimales");
         Invalido(x=>x.Ingresos=1000000000000m,"Límite de ingresos");
@@ -59,7 +105,7 @@ public class PruebasClientes : MarshalByRefObject {
         using(var scope=new TransactionScope()) {
             var servicio=new ClienteServicio(new ClienteRepositorio(conexion));
             var token=Guid.NewGuid().ToString("N").Substring(0,20).ToUpperInvariant();
-            c=ClienteValido(); c.TipoIdentificacion="PASAPORTE"; c.Identificacion=token; c.Nombres="Prueba " + token;
+            c=ClienteValido(); c.TipoIdentificacion="PASAPORTE"; c.Identificacion=token; c.Nombres="Prueba Ana";
             int id=servicio.Guardar(c); Check(id>0,"Alta persistida");
             var editado=servicio.Obtener(id); Check(editado.Ingresos==1250.50m && editado.FechaNacimiento==c.FechaNacimiento,"Lectura conserva centavos y fecha");
             Check(editado.CodigoProvincia=="08" && editado.CodigoDistrito=="0801" && editado.CodigoCorregimiento=="080105" && editado.Provincia=="PANAMA" && editado.Corregimiento=="BELLA VISTA","Códigos y nombres originales persistidos");
@@ -70,7 +116,7 @@ public class PruebasClientes : MarshalByRefObject {
             Check(!servicio.Listar(token,true,"","JURIDICA").Any(x=>x.Id==id),"Filtro por tipo de persona");
             Check(editado.CreadoUtc > DateTime.UtcNow.AddMinutes(-5) && editado.CreadoUtc <= DateTime.UtcNow.AddMinutes(1),"Fecha de alta disponible para el gráfico");
             Check(Falla(()=>servicio.Guardar(c)),"Identificación duplicada rechazada");
-            var antigua=servicio.Obtener(id); editado.Nombres="Editado " + token; servicio.Guardar(editado);
+            var antigua=servicio.Obtener(id); editado.Nombres="Editado Ana"; servicio.Guardar(editado);
             Check(servicio.Obtener(id).Nombres==editado.Nombres,"Edición persistida");
             Check(Falla(()=>servicio.Guardar(antigua)),"Edición concurrente rechazada");
             Check(!servicio.Obtener(id).Version.SequenceEqual(antigua.Version),"Versión numérica incrementada al editar");

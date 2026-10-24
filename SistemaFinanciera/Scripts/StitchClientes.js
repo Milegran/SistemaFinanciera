@@ -14,6 +14,136 @@
             t.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const next=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];selectTab(next.dataset.formTab);next.focus();}});
         });
         selectTab(hidden ? hidden.value : 'personal');
+        // Las expresiones se publican desde ClienteServicio para mantener las mismas reglas.
+        const rules = JSON.parse(document.getElementById('reglas-cliente').textContent);
+        const fields = Array.from(dialog.querySelectorAll('.form-control,.form-select'));
+        const field = name => fields.find(el => el.id.endsWith('_'+name));
+        const kind = field('ddlTipoPersona');
+        const documentType = field('ddlTipoIdentificacion');
+        const namePattern = new RegExp(rules.nombre, 'u');
+        const phonePattern = new RegExp(rules.telefono, 'u');
+        const letters = /\p{L}/u;
+        const forbidden = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\p{Cf}<>]/u;
+        function phone(value) {
+            let result = value.replace(/[\s()+-]/g, '');
+            if (result.startsWith('507') && [10,11].includes(result.length)) result = result.slice(3);
+            return result;
+        }
+        function natural() { return kind.value === 'NATURAL'; }
+        function configure() {
+            fields.forEach(el => { el.required = !el.disabled; });
+            const id = field('txtIdentificacion');
+            const labels = {
+                CEDULA: ['8-123-456 o E-123-456', rules.cedula],
+                PASAPORTE: ['5 a 30 letras o números', rules.pasaporte],
+                RUC: ['12345-1-123456', rules.ruc]
+            };
+            const selected = labels[documentType.value];
+            id.placeholder = selected ? selected[0] : 'Seleccione el tipo de identificación';
+            id.inputMode = 'text'; // El teclado debe permitir los guiones del documento.
+            field('txtNombres').placeholder = natural() ? 'Ej. María José' : 'Ej. Comercial 123, S.A.';
+            field('txtApellidos').placeholder = 'Ej. Pérez-Gómez';
+            field('txtTelefono').inputMode = 'tel';
+            field('txtTelefono').autocomplete = 'tel';
+            field('txtCorreo').autocomplete = 'email';
+            field('txtIngresos').inputMode = 'decimal';
+            field('txtReferencias').maxLength = 1000;
+            field('txtFechaNacimiento').min = rules.fechaMinima;
+            field('txtFechaNacimiento').max = rules.fechaMaxima;
+        }
+        function errorFor(el) {
+            if (el.disabled) return '';
+            const value = el.value.trim().normalize('NFC');
+            const key = el.id.split('_').pop();
+            if (el.validity.badInput) return 'Introduzca un valor válido para este campo.';
+            if (!value) return 'Este campo es obligatorio.';
+            if (el.maxLength > 0 && value.length > el.maxLength) return 'Máximo '+el.maxLength+' caracteres.';
+            if (forbidden.test(value)) return 'No se admiten estos símbolos o caracteres de control.';
+            switch (key) {
+                case 'ddlTipoPersona': return ['NATURAL','JURIDICA'].includes(value) ? '' : 'Seleccione un tipo de persona válido.';
+                case 'ddlTipoIdentificacion': return (natural() ? ['CEDULA','PASAPORTE'] : ['RUC']).includes(value) ? '' : 'Seleccione una identificación compatible con el tipo de persona.';
+                case 'txtIdentificacion': {
+                    const pattern = {CEDULA:rules.cedula,PASAPORTE:rules.pasaporte,RUC:rules.ruc}[documentType.value];
+                    return pattern && new RegExp(pattern,'u').test(value.replace(/\s/g,'').toUpperCase()) ? '' : 'Formato inválido. Ejemplo: '+el.placeholder+'.';
+                }
+                case 'txtNombres':
+                    return (natural() ? namePattern.test(value) : letters.test(value)) ? '' : (natural() ? 'Solo letras, acentos, espacios, apóstrofos, puntos y guiones entre nombres.' : 'La razón social debe contener al menos una letra.');
+                case 'txtApellidos': return namePattern.test(value) ? '' : 'Solo letras, acentos, espacios, apóstrofos, puntos y guiones entre apellidos.';
+                case 'txtFechaNacimiento': {
+                    const date = new Date(value+'T12:00:00Z');
+                    return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(date.getTime()) && date.toISOString().slice(0,10) === value && value >= rules.fechaMinima && value <= rules.fechaMaxima ? '' : 'Seleccione una fecha válida, no futura y dentro de los últimos 120 años.';
+                }
+                case 'ddlSexo': return ['F','M','OTRO'].includes(value) || !natural() ? '' : 'Seleccione el sexo; No aplica es solo para personas jurídicas.';
+                case 'ddlEstadoCivil': return ['SOLTERO','CASADO','UNIDO','DIVORCIADO','VIUDO'].includes(value) || !natural() ? '' : 'Seleccione un estado civil válido.';
+                case 'txtTelefono': return phonePattern.test(phone(value)) ? '' : 'Indique 7 u 8 dígitos, distintos de solo ceros. Puede incluir +507.';
+                case 'txtCorreo': return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value) && !el.validity.typeMismatch ? '' : 'Escriba un correo válido, por ejemplo nombre@dominio.com.';
+                case 'txtDireccion': return letters.test(value) ? '' : 'Describa la dirección con letras; puede incluir números y signos.';
+                case 'txtOcupacion': return letters.test(value) ? '' : 'Describa la ocupación o actividad económica con letras.';
+                case 'txtIngresos': return /^\d+(?:\.\d{1,2})?$/.test(value) && Number(value) <= 999999999999.99 ? '' : 'Indique un monto entre 0 y 999999999999.99, con máximo dos decimales.';
+                case 'txtReferencias':
+                    return /[\p{L}\p{M}]{2,}/u.test(value) && (value.match(/\+?[0-9](?:[0-9 \t()+-]*[0-9])?/g) || []).some(candidate => phonePattern.test(phone(candidate)))
+                        ? '' : 'Incluya un nombre y un teléfono válido de 7 u 8 dígitos. Puede usar texto libre y saltos de línea.';
+                default:
+                    return el.tagName === 'SELECT' && !Array.from(el.options).some(option => option.value === value && !option.disabled) ? 'Seleccione una opción válida del catálogo.' : '';
+            }
+        }
+        function showError(el, message) {
+            let hint = document.getElementById(el.id+'Error');
+            if (!hint) {
+                hint = document.createElement('small');
+                hint.id = el.id+'Error';
+                hint.className = 'field-validation-error';
+                hint.setAttribute('aria-live','polite');
+                el.insertAdjacentElement('afterend',hint);
+                el.setAttribute('aria-describedby', [el.getAttribute('aria-describedby'),hint.id].filter(Boolean).join(' '));
+            }
+            hint.textContent = message;
+            hint.hidden = !message;
+            el.classList.toggle('is-invalid', Boolean(message));
+            el.setAttribute('aria-invalid', String(Boolean(message)));
+            el.setCustomValidity(message);
+            return !message;
+        }
+        function validate(el) { return showError(el,errorFor(el)); }
+        function allowedCharacters(el, text) {
+            const key = el.id.split('_').pop();
+            if ((key === 'txtNombres' && natural()) || key === 'txtApellidos') return /^[\p{L}\p{M}\s'\u2019.\-]*$/u.test(text);
+            if (key === 'txtIdentificacion') return (documentType.value === 'RUC' ? /^[0-9\s-]*$/ : /^[a-zA-Z0-9\s-]*$/).test(text);
+            if (key === 'txtTelefono') return /^[0-9\s()+-]*$/.test(text);
+            if (key === 'txtIngresos') return /^[0-9.]*$/.test(text);
+            return !forbidden.test(text);
+        }
+        configure();
+        dialog.closest('form').noValidate = true; // Validamos antes de enfocar cualquier pestaña oculta.
+        fields.forEach(el => {
+            el.addEventListener('beforeinput', e => {
+                if (!e.isComposing && e.data && !allowedCharacters(el,e.data)) {
+                    e.preventDefault();
+                    showError(el,'Ese carácter no corresponde a este campo.');
+                }
+            });
+            el.addEventListener('paste', e => {
+                if (!allowedCharacters(el,e.clipboardData.getData('text'))) {
+                    e.preventDefault();
+                    showError(el,'El texto pegado contiene caracteres que no corresponden a este campo.');
+                }
+            });
+            el.addEventListener('input', () => validate(el));
+            el.addEventListener('blur', () => {
+                if (el === field('txtIdentificacion')) el.value = el.value.replace(/\s/g,'').toUpperCase();
+                validate(el);
+            });
+            el.addEventListener('change', () => { configure(); validate(el); });
+        });
+        documentType.addEventListener('change', () => { configure(); if (field('txtIdentificacion').value) validate(field('txtIdentificacion')); });
+        window.validarFormularioCliente = function () {
+            const invalid = fields.filter(el => !validate(el));
+            if (!invalid.length) return true;
+            const section = invalid[0].closest('.form-section');
+            if (section) selectTab(section.id.replace('seccion-',''));
+            invalid[0].focus();
+            return false;
+        };
         document.body.style.overflow='hidden';
         // Mantener la navegación por teclado dentro del diálogo; el formulario es validado por el servidor.
         const shell=document.querySelector('.stitch-shell');
