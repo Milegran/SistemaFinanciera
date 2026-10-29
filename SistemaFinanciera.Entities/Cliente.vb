@@ -21,6 +21,7 @@ Public Class Cliente
     Public Property Ocupacion As String
     Public Property Ingresos As Decimal
     Public Property Referencias As String
+    Public Property PrestamosActivos As Integer
     Public Property CreadoUtc As DateTime
     Public Property Activo As Boolean = True
     Public Property Version As Byte()

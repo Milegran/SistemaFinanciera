@@ -1,5 +1,7 @@
 # Base de datos CapitalWest
 
+Actualización de implementación: los módulos de Productos, Solicitudes, Préstamos y Pagos, los cinco métodos y el acceso inicial ya están implementados. Véase `docs/Modulos_financieros.md` desde la raíz para responsabilidades cumplidas y límites actuales. Las menciones a funciones pendientes en el diseño original deben contrastarse con ese documento. El esquema no cambia.
+
 Esquema simplificado para el Proyecto No. 2 DS8: **27 tablas, 15 vistas y dos triggers de protección de auditoría**. MariaDB 10.4.32 de XAMPP; aplicación Web Forms VB/.NET Framework 4.8 con MySqlConnector.
 
 ## Instalación nueva

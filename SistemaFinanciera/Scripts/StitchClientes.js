@@ -1,13 +1,78 @@
 ﻿document.addEventListener('DOMContentLoaded', function () {
+    const confirmOverlay = document.querySelector('[data-client-confirm]');
+    if (confirmOverlay) {
+        const confirmDialog = confirmOverlay.querySelector('.client-confirm-dialog');
+        const confirmTitle = document.getElementById('clientConfirmTitle');
+        const confirmMessage = document.getElementById('clientConfirmMessage');
+        const confirmAccept = confirmOverlay.querySelector('[data-confirm-accept]');
+        const confirmCancel = confirmOverlay.querySelector('[data-confirm-cancel]');
+        let pendingTrigger = null;
+        let approvedTrigger = null;
+        let priorOverflow = '';
+        function closeConfirmation(restoreFocus) {
+            confirmOverlay.hidden = true;
+            document.body.style.overflow = priorOverflow;
+            if (restoreFocus && pendingTrigger && pendingTrigger.isConnected) pendingTrigger.focus();
+            pendingTrigger = null;
+        }
+        window.solicitarConfirmacionEstado = function (trigger) {
+            if (approvedTrigger === trigger) {
+                approvedTrigger = null;
+                return true;
+            }
+            pendingTrigger = trigger;
+            const action = trigger.dataset.confirmAction || ((trigger.value || trigger.textContent || '').toLowerCase().includes('reactivar') ? 'reactivar' : 'desactivar');
+            const isReactivate = action === 'reactivar';
+            confirmOverlay.classList.toggle('is-reactivate', isReactivate);
+            confirmTitle.textContent = isReactivate ? '¿Reactivar cliente?' : '¿Desactivar cliente?';
+            confirmMessage.textContent = isReactivate
+                ? 'El cliente volverá a estar disponible para las operaciones permitidas. Su historial y sus registros se conservarán.'
+                : 'El cliente no podrá iniciar nuevas solicitudes mientras esté inactivo. Su historial y sus registros se conservarán.';
+            confirmAccept.textContent = isReactivate ? 'Reactivar cliente' : 'Desactivar cliente';
+            priorOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            confirmOverlay.hidden = false;
+            confirmCancel.focus();
+            return false;
+        };
+        confirmCancel.addEventListener('click', () => closeConfirmation(true));
+        confirmAccept.addEventListener('click', () => {
+            if (!pendingTrigger) return;
+            const trigger = pendingTrigger;
+            approvedTrigger = trigger;
+            closeConfirmation(false);
+            trigger.click();
+        });
+        confirmOverlay.addEventListener('click', event => {
+            if (event.target === confirmOverlay) closeConfirmation(true);
+        });
+        confirmDialog.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeConfirmation(true);
+            } else if (event.key === 'Tab') {
+                const focusable = [confirmCancel, confirmAccept];
+                if (event.shiftKey && document.activeElement === focusable[0]) {
+                    event.preventDefault();
+                    focusable[1].focus();
+                } else if (!event.shiftKey && document.activeElement === focusable[1]) {
+                    event.preventDefault();
+                    focusable[0].focus();
+                }
+            }
+        });
+    }
     const dialog = document.querySelector('.form-overlay');
     if (dialog) {
         const hidden = dialog.querySelector('input[type=hidden]');
         const tabs = Array.from(dialog.querySelectorAll('[data-form-tab]'));
+        const submitButton = dialog.querySelector('input[id$="btnGuardarCliente"]');
         function selectTab(name) {
             if (!tabs.some(t => t.dataset.formTab === name)) name = 'personal';
             tabs.forEach(t => { const active=t.dataset.formTab===name; t.setAttribute('aria-selected',String(active)); t.tabIndex=active?0:-1; });
             dialog.querySelectorAll('.form-section').forEach(s => s.hidden = s.id !== 'seccion-'+name);
             if (hidden) hidden.value = name;
+            if (submitButton) submitButton.value = name === 'referencias' ? 'Guardar cliente' : 'Siguiente';
         }
         tabs.forEach((t,i) => {
             t.addEventListener('click',()=>selectTab(t.dataset.formTab));
@@ -144,6 +209,23 @@
             invalid[0].focus();
             return false;
         };
+        window.avanzarFormularioCliente = function () {
+            const current = hidden ? hidden.value : 'personal';
+            if (current === 'referencias') return window.validarFormularioCliente();
+            const section = dialog.querySelector('#seccion-'+current);
+            if (!section) return false;
+            const invalid = fields.filter(el => section.contains(el) && !validate(el));
+            if (invalid.length) {
+                invalid[0].focus();
+                return false;
+            }
+            const index = tabs.findIndex(tab => tab.dataset.formTab === current);
+            const next = tabs[index + 1];
+            if (!next) return false;
+            selectTab(next.dataset.formTab);
+            next.focus();
+            return false;
+        };
         document.body.style.overflow='hidden';
         // Mantener la navegación por teclado dentro del diálogo; el formulario es validado por el servidor.
         const shell=document.querySelector('.stitch-shell');
@@ -161,10 +243,35 @@
         if(focusTarget)focusTarget.focus();
     }
     const state=document.querySelector('select[id$="ddlEstado"]');
+    const province=document.querySelector('select[id$="ddlProvinciaFiltro"]');
+    const person=document.querySelector('select[id$="ddlPersonaFiltro"]');
+    const loanFilter=document.querySelector('input[id$="hidFiltroPrestamo"]');
     const search=document.querySelector('input[id$="btnBuscar"]');
-    document.querySelectorAll('[data-client-filter]').forEach(button=>button.addEventListener('click',()=>{state.value=button.dataset.clientFilter;search.click();}));
+    document.querySelectorAll('[data-client-filter]').forEach(button=>button.addEventListener('click',()=>{
+        if(!state||!search)return;
+        const filter=button.dataset.clientFilter;
+        state.value=filter==='1'||filter==='0'?filter:'';
+        if(province)province.value='';
+        if(person)person.value='';
+        const input=document.querySelector('input[id$="txtBuscar"]');
+        if(input)input.value='';
+        if(loanFilter)loanFilter.value=filter==='prestamo'?'1':'0';
+        search.click();
+    }));
+    [state,province,person].filter(Boolean).forEach(control=>control.addEventListener('change',()=>{if(loanFilter)loanFilter.value='0';}));
     const input=document.querySelector('input[id$="txtBuscar"]');
     if(input)input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search.click();}});
     const print=document.querySelector('[data-print-clients]');
     if(print)print.addEventListener('click',()=>window.print());
+    document.querySelectorAll('tr[data-view-button]').forEach(row=>{
+        const openProfile=()=>{const view=document.getElementById(row.dataset.viewButton);if(view)view.click();};
+        row.addEventListener('click',event=>{if(event.target.closest('a,button,input'))return;openProfile();});
+        row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfile();}});
+    });
+    const profileTabs=document.querySelectorAll('[data-profile-tab]');
+    profileTabs.forEach(tab=>tab.addEventListener('click',()=>{
+        const selected=tab.dataset.profileTab;
+        profileTabs.forEach(item=>{const active=item===tab;item.classList.toggle('is-active',active);item.setAttribute('aria-selected',String(active));});
+        document.querySelectorAll('[data-profile-panel]').forEach(panel=>{panel.hidden=panel.dataset.profilePanel!==selected;});
+    }));
 });

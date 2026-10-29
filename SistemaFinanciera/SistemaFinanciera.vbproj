@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -125,6 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="About.aspx" />
+    <Content Include="Acceso.aspx" />
     <Content Include="Administracion\Auditoria.aspx" />
     <Content Include="Administracion\Usuarios.aspx" />
     <Content Include="Clientes\Clientes.aspx" />
@@ -146,10 +147,15 @@
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
     <Content Include="Content\Financiera.css" />
+    <Content Include="Content\Acceso.css" />
     <Content Include="Content\Stitch.css" />
     <Content Include="Content\Images\capitalwest.png" />
+    <Content Include="Content\Images\capitalwest-login.png" />
     <Content Include="Scripts\CapitalWest.js" />
+    <Content Include="Scripts\Acceso.js" />
+    <Content Include="Scripts\FinanzasFormularios.js" />
     <Content Include="Scripts\StitchClientes.js" />
+    <Content Include="Scripts\StitchProductos.js" />
     <Content Include="Content\Site.css" />
     <Content Include="Default.aspx" />
     <Content Include="EstadosCuenta\EstadosCuenta.aspx" />
@@ -234,6 +240,16 @@
     <Compile Include="Administracion\Usuarios.aspx.vb">
       <DependentUpon>Usuarios.aspx</DependentUpon>
       <SubType>ASPXCodebehind</SubType>
+    </Compile>
+    <Compile Include="FinanzasPagina.vb">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Acceso.aspx.vb">
+      <DependentUpon>Acceso.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Acceso.aspx.designer.vb">
+      <DependentUpon>Acceso.aspx</DependentUpon>
     </Compile>
     <Compile Include="App_Start\BundleConfig.vb" />
     <Compile Include="App_Start\RouteConfig.vb" />

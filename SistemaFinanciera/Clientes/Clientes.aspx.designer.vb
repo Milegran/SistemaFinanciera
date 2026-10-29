@@ -32,6 +32,9 @@ Partial Public Class Clientes
     Protected WithEvents gvClientes As Global.System.Web.UI.WebControls.GridView
     Protected WithEvents litKpiActivos As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litKpiInactivos As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litKpiPrestamo As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litCarteraActiva As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents hidFiltroPrestamo As Global.System.Web.UI.WebControls.HiddenField
     Protected WithEvents ddlProvinciaFiltro As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents ddlPersonaFiltro As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents btnLimpiar As Global.System.Web.UI.WebControls.Button
@@ -40,6 +43,9 @@ Partial Public Class Clientes
     Protected WithEvents pnlPerfil As Global.System.Web.UI.WebControls.Panel
     Protected WithEvents btnVolverPerfil As Global.System.Web.UI.WebControls.Button
     Protected WithEvents btnEditarPerfil As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents btnCambiarEstadoPerfil As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents lnkNuevaSolicitud As Global.System.Web.UI.WebControls.HyperLink
+    Protected WithEvents litPerfilCabecera As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litPerfil As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents pnlErrorFormulario As Global.System.Web.UI.WebControls.Panel
     Protected WithEvents litErrorFormulario As Global.System.Web.UI.WebControls.Literal

@@ -41,3 +41,7 @@ Catálogos geográficos obligatorios: consulte [Ubicación]( MySQL/Ubicacion/LEE
 ## Esquema simplificado
 
 La versión actual tiene 27 tablas y 15 vistas. Si ya importó la versión anterior de 40 tablas, use la migración descrita en `MySQL/CapitalWest/LEEME.md`; no vuelva a importar el script completo. Los permisos se implementarán por rol en servidor.
+
+## Módulos financieros implementados
+
+Productos, solicitudes, préstamos y pagos utilizan este mismo esquema simplificado, sin migración adicional. Consulte [Operación y límites](../docs/Modulos_financieros.md) y [Fórmulas y ejemplos](../docs/Calculos_financieros.md). Los módulos nuevos requieren acceso desde Acceso.aspx; si no hay usuarios, el primer administrador se crea localmente desde esa página.

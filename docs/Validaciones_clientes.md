@@ -29,6 +29,6 @@ Estas son políticas de captura del proyecto: las expresiones no acreditan exist
 
 Las referencias siguen en la columna de texto actual, sin migración de BD. La etiqueta y ejemplo orientan sobre el contenido sin imponer un formato. Un cliente previo con referencias libres o datos que ya no cumplan las reglas deberá corregirlos al editar; consultar y desactivar no revalida esos datos.
 
-Los demás módulos siguen como pantallas pendientes y no contienen controles editables. No se crearon formularios para módulos aún no implementados.
+Acceso, Productos, Solicitudes, Préstamos y Pagos también cuentan con validación de captura y mensajes junto a los campos. Véase `Validaciones_finanzas.md`.
 
 Verificación: compilación de los cuatro proyectos y 96 comprobaciones BL/DAL con datos revertidos. También se comprobó en navegador el rechazo de números en nombres, errores de identificación/teléfono/correo/dirección y el salto a la pestaña Contacto al intentar guardar datos personales válidos con contacto incompleto.

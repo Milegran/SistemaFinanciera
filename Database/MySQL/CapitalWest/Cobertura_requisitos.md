@@ -2,7 +2,7 @@
 
 Fuente obligatoria: Proyecto No. 2 DS8.pdf, secciones 3–19. El Glosario.pdf define los conceptos. Las extensiones del antiguo diseño de pantallas no se tratan como requisitos obligatorios del enunciado.
 
-Esta tabla indica soporte de datos, no funcionalidad implementada. Actualmente solo clientes y su dashboard están conectados a operaciones reales.
+Esta tabla indica soporte de datos, no funcionalidad implementada. Clientes, productos, solicitudes, préstamos y pagos están conectados a operaciones reales. Las cinco clases de cálculo, simulación integrada y autorización de los módulos nuevos se describen en docs/Modulos_financieros.md; los pendientes de la tabla siguiente reflejan el diseño anterior y se actualizan con ese registro de implementación.
 
 | Requisito | Secciones | Soporte de datos / implementación pendiente |
 |---|---|---|
