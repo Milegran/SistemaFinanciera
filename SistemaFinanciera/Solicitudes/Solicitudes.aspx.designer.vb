@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Option Explicit On
 Partial Public Class Solicitudes
     Protected WithEvents pnlListadoSolicitudes As Global.System.Web.UI.WebControls.Panel
@@ -60,7 +60,8 @@ Partial Public Class Solicitudes
     Protected WithEvents metodo As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents periodo As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents monto As Global.System.Web.UI.WebControls.TextBox
-    Protected WithEvents cuotas As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents cuotas As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents ayudaPlazo As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents primerPago As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents observaciones As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents simular As Global.System.Web.UI.WebControls.Button
@@ -77,4 +78,8 @@ Partial Public Class Solicitudes
     Protected WithEvents aprobar As Global.System.Web.UI.WebControls.Button
     Protected WithEvents rechazar As Global.System.Web.UI.WebControls.Button
     Protected WithEvents nueva As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents pnlMensajeEvaluacion As Global.System.Web.UI.HtmlControls.HtmlGenericControl
+    Protected WithEvents mensajeEvaluacion As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents pnlMensajeCreacion As Global.System.Web.UI.HtmlControls.HtmlGenericControl
+    Protected WithEvents mensajeCreacion As Global.System.Web.UI.WebControls.Literal
 End Class

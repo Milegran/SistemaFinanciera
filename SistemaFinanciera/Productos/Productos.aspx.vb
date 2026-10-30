@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Web
 Imports SistemaFinanciera.Entities
@@ -14,8 +14,10 @@ Public Class Productos
         listado.Columns(listado.Columns.Count - 1).Visible = edicion.Visible
         If Not IsPostBack Then Ejecutar(Sub()
             Lista(metodos, ServicioFinanzas.Consultar("METODOS", Actor.Id))
-            Lista(periodos, ServicioFinanzas.Consultar("PERIODICIDADES", Actor.Id))
-            Lista(capitalizacion, ServicioFinanzas.Consultar("PERIODICIDADES", Actor.Id))
+            Lista(periodos, ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id))
+            Lista(capitalizacion, ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id))
+            If capitalizacion.Items.Count > 1 Then capitalizacion.Items.RemoveAt(0)
+            capitalizacion.Enabled = False
             tipoTasa.Items.Add(New ListItem("Nominal anual", "NOMINAL_ANUAL"))
             tipoTasa.Items.Add(New ListItem("Efectiva anual", "EFECTIVA_ANUAL"))
             Dim productosTodos = ServicioFinanzas.Consultar("PRODUCTOS", Actor.Id)
@@ -79,8 +81,8 @@ Public Class Productos
         ViewState("ProductoId") = 0
         codigo.Text = "" : nombre.Text = "" : descripcion.Text = ""
         minimo.Text = "100.00" : maximo.Text = "10000.00"
-        cuotasMin.Text = "1" : cuotasMax.Text = "120"
-        mesesMin.Text = "0.01" : mesesMax.Text = "120"
+        mesesMin.Text = "1" : mesesMax.Text = "120"
+        tipoComision.SelectedValue = "FIJO"
         tasa.Text = "12" : comision.Text = "0.00" : gastos.Text = "0.00"
         activo.Checked = True
         For Each item As ListItem In metodos.Items
@@ -101,10 +103,12 @@ Public Class Productos
         ViewState("ProductoId") = id
         codigo.Text = CStr(filaProducto("Codigo")) : nombre.Text = CStr(filaProducto("Nombre")) : descripcion.Text = CStr(filaProducto("Descripcion"))
         minimo.Text = Dinero(filaProducto("MontoMinimo")) : maximo.Text = Dinero(filaProducto("MontoMaximo"))
-        cuotasMin.Text = CStr(filaProducto("PlazoMinimo")) : cuotasMax.Text = CStr(filaProducto("PlazoMaximo"))
-        mesesMin.Text = Dinero(filaProducto("PlazoMinimoMeses")) : mesesMax.Text = Dinero(filaProducto("PlazoMaximoMeses"))
+        ' Conservar el rango efectivo que admitían cuotas y meses antes de unificarlos.
+        mesesMin.Text = Math.Max(CInt(filaProducto("PlazoMinimo")), CInt(Math.Ceiling(CDec(filaProducto("PlazoMinimoMeses"))))).ToString()
+        mesesMax.Text = Math.Min(CInt(filaProducto("PlazoMaximo")), CInt(Math.Floor(CDec(filaProducto("PlazoMaximoMeses"))))).ToString()
         tasa.Text = Convert.ToDecimal(filaProducto("TasaAnual")).ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)
-        tipoTasa.SelectedValue = CStr(filaProducto("TipoTasa")) : capitalizacion.SelectedValue = CStr(filaProducto("CapitalizacionId"))
+        tipoTasa.SelectedValue = CStr(filaProducto("TipoTasa")) : capitalizacion.SelectedIndex = 0
+        tipoComision.SelectedValue = CStr(filaProducto("TipoComision"))
         comision.Text = Dinero(filaProducto("ValorComision")) : gastos.Text = Dinero(filaProducto("ValorGastos")) : activo.Checked = CBool(filaProducto("Activo"))
         Dim permitidos = ServicioFinanzas.Consultar("PRODUCTO_METODOS", Actor.Id, id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()
         For Each item As ListItem In metodos.Items
@@ -112,18 +116,18 @@ Public Class Productos
         Next
         permitidos = ServicioFinanzas.Consultar("PRODUCTO_PERIODICIDADES", Actor.Id, id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()
         For Each item As ListItem In periodos.Items
-            item.Selected = permitidos.Contains(CInt(item.Value))
+            item.Selected = True
         Next
     End Sub
     Private Function CargarProducto(id As Integer) As ProductoFinanciero
         Dim filaProducto = Fila(ServicioFinanzas.Consultar("PRODUCTOS", Actor.Id, id))
-        Dim p As New ProductoFinanciero With {.Id = id, .Codigo = CStr(filaProducto("Codigo")), .Nombre = CStr(filaProducto("Nombre")), .Descripcion = If(IsDBNull(filaProducto("Descripcion")), "", CStr(filaProducto("Descripcion"))), .MontoMinimo = Convert.ToDecimal(filaProducto("MontoMinimo")), .MontoMaximo = Convert.ToDecimal(filaProducto("MontoMaximo")), .CuotasMinimas = CInt(filaProducto("PlazoMinimo")), .CuotasMaximas = CInt(filaProducto("PlazoMaximo")), .MesesMinimos = Convert.ToDecimal(filaProducto("PlazoMinimoMeses")), .MesesMaximos = Convert.ToDecimal(filaProducto("PlazoMaximoMeses")), .TasaAnual = Convert.ToDecimal(filaProducto("TasaAnual")), .TipoTasa = CStr(filaProducto("TipoTasa")), .CapitalizacionId = CInt(filaProducto("CapitalizacionId")), .Comision = Convert.ToDecimal(filaProducto("ValorComision")), .Gastos = Convert.ToDecimal(filaProducto("ValorGastos")), .Activo = CBool(filaProducto("Activo"))}
+        Dim p As New ProductoFinanciero With {.Id = id, .Codigo = CStr(filaProducto("Codigo")), .Nombre = CStr(filaProducto("Nombre")), .Descripcion = If(IsDBNull(filaProducto("Descripcion")), "", CStr(filaProducto("Descripcion"))), .MontoMinimo = Convert.ToDecimal(filaProducto("MontoMinimo")), .MontoMaximo = Convert.ToDecimal(filaProducto("MontoMaximo")), .CuotasMinimas = CInt(filaProducto("PlazoMinimo")), .CuotasMaximas = CInt(filaProducto("PlazoMaximo")), .MesesMinimos = Convert.ToDecimal(filaProducto("PlazoMinimoMeses")), .MesesMaximos = Convert.ToDecimal(filaProducto("PlazoMaximoMeses")), .TasaAnual = Convert.ToDecimal(filaProducto("TasaAnual")), .TipoTasa = CStr(filaProducto("TipoTasa")), .CapitalizacionId = CInt(filaProducto("CapitalizacionId")), .TipoComision = CStr(filaProducto("TipoComision")), .Comision = Convert.ToDecimal(filaProducto("ValorComision")), .Gastos = Convert.ToDecimal(filaProducto("ValorGastos")), .Activo = CBool(filaProducto("Activo"))}
         p.Metodos = ServicioFinanzas.Consultar("PRODUCTO_METODOS", Actor.Id, id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()
         p.Periodicidades = ServicioFinanzas.Consultar("PRODUCTO_PERIODICIDADES", Actor.Id, id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()
         Return p
     End Function
     Protected Sub AccionProducto(sender As Object, e As GridViewCommandEventArgs) Handles listado.RowCommand
-        If e.CommandName <> "Elegir" AndAlso e.CommandName <> "VerProducto" AndAlso e.CommandName <> "CambiarEstado" Then Return
+        If e.CommandName <> "Elegir" AndAlso e.CommandName <> "VerProducto" AndAlso e.CommandName <> "CambiarEstado" AndAlso e.CommandName <> "EliminarProducto" Then Return
         Ejecutar(Sub()
             Dim indice = CInt(e.CommandArgument)
             Dim id = CInt(listado.DataKeys(indice).Value)
@@ -132,12 +136,18 @@ Public Class Productos
                 Return
             End If
             If Not Actor.Puede("ADMINISTRADOR") Then Throw New UnauthorizedAccessException("Solo el administrador puede editar productos.")
-            If e.CommandName = "CambiarEstado" Then
-                Dim p = CargarProducto(id)
-                p.Activo = Not p.Activo
-                ServicioFinanzas.GuardarProducto(p, Actor.Id)
+            If e.CommandName = "EliminarProducto" Then
+                ServicioFinanzas.EliminarProducto(id, Actor.Id)
                 CargarListado()
-                Notificar(If(p.Activo, "Producto reactivado.", "Producto desactivado."))
+                CargarTasas()
+                Notificar("Producto eliminado correctamente.")
+                Return
+            End If
+            If e.CommandName = "CambiarEstado" Then
+                Dim activo = Not CBool(Fila(ServicioFinanzas.Consultar("PRODUCTOS", Actor.Id, id))("Activo"))
+                ServicioFinanzas.CambiarEstadoProducto(id, activo, Actor.Id)
+                CargarListado()
+                Notificar(If(activo, "Producto reactivado.", "Producto desactivado."))
                 Return
             End If
             CargarProductoEnFormulario(id)
@@ -167,7 +177,7 @@ Public Class Productos
         litProductoPlazoKpi.Text = cuotasMinimas.ToString("N0", moneda) & "–" & cuotasMaximas.ToString("N0", moneda)
         litProductoTasaKpi.Text = If(tasaConfigurada, tasaAnual.ToString("0.######", moneda) & "%", "Sin tasa")
         litProductoTipoTasaKpi.Text = If(tasaConfigurada, TipoTasaTexto(tipoTasaCodigo) & " · anual", "Configure una tasa para habilitar el producto")
-        litProductoCostosKpi.Text = "B/. " & (comisionFija + gastosFijos).ToString("N2", moneda)
+        litProductoCostosKpi.Text = If(CStr(producto("TipoComision")) = "PORCENTAJE", comisionFija.ToString("0.##", moneda) & "% + B/. " & gastosFijos.ToString("N2", moneda), "B/. " & (comisionFija + gastosFijos).ToString("N2", moneda))
         litProductoCodigo.Text = codigoProducto
         Dim descripcionProducto = If(IsDBNull(producto("Descripcion")), "", CStr(producto("Descripcion")))
         litProductoDescripcion.Text = If(String.IsNullOrWhiteSpace(descripcionProducto), "Sin descripción", descripcionProducto)
@@ -175,7 +185,7 @@ Public Class Productos
         litProductoMontoMaximo.Text = "B/. " & montoMaximo.ToString("N2", moneda)
         litProductoCuotas.Text = cuotasMinimas.ToString("N0", moneda) & "–" & cuotasMaximas.ToString("N0", moneda) & " cuotas"
         litProductoMeses.Text = mesesMinimos.ToString("0.##", moneda) & "–" & mesesMaximos.ToString("0.##", moneda) & " meses"
-        litProductoComision.Text = "B/. " & comisionFija.ToString("N2", moneda)
+        litProductoComision.Text = If(CStr(producto("TipoComision")) = "PORCENTAJE", comisionFija.ToString("0.##", moneda) & "% del monto solicitado", "B/. " & comisionFija.ToString("N2", moneda))
         litProductoGastos.Text = "B/. " & gastosFijos.ToString("N2", moneda)
         litProductoCapitalizacion.Text = If(IsDBNull(producto("CapitalizacionId")), "No definida", If(capitalizacion.Items.FindByValue(CStr(producto("CapitalizacionId"))) Is Nothing, "No disponible", capitalizacion.Items.FindByValue(CStr(producto("CapitalizacionId"))).Text))
         Dim metodosProducto = ServicioFinanzas.Consultar("PRODUCTO_METODOS", Actor.Id, id)
@@ -236,18 +246,17 @@ Public Class Productos
         Ejecutar(Sub()
             If Not Actor.Puede("ADMINISTRADOR") Then Throw New UnauthorizedAccessException("Solo el administrador puede cambiar el estado del producto.")
             Dim id = CInt(ViewState("DetalleProductoId"))
-            Dim producto = CargarProducto(id)
-            producto.Activo = Not producto.Activo
-            ServicioFinanzas.GuardarProducto(producto, Actor.Id)
+            Dim activo = Not CBool(Fila(ServicioFinanzas.Consultar("PRODUCTOS", Actor.Id, id))("Activo"))
+            ServicioFinanzas.CambiarEstadoProducto(id, activo, Actor.Id)
             CargarListado()
             MostrarDetalleProducto(id)
         End Sub)
     End Sub
     Protected Sub GuardarClick(sender As Object, e As EventArgs) Handles guardar.Click
         Ejecutar(Sub()
-            Dim p As New ProductoFinanciero With {.Id = CInt(ViewState("ProductoId")), .Codigo = codigo.Text.Trim(), .Nombre = nombre.Text.Trim(), .Descripcion = descripcion.Text.Trim(), .MontoMinimo = Numero(minimo, "Monto mínimo"), .MontoMaximo = Numero(maximo, "Monto máximo"), .CuotasMinimas = Entero(cuotasMin, "Cuotas mínimas"), .CuotasMaximas = Entero(cuotasMax, "Cuotas máximas"), .MesesMinimos = Numero(mesesMin, "Meses mínimos"), .MesesMaximos = Numero(mesesMax, "Meses máximos"), .TasaAnual = Numero(tasa, "Tasa"), .TipoTasa = tipoTasa.SelectedValue, .CapitalizacionId = Seleccion(capitalizacion), .Comision = Numero(comision, "Comisión"), .Gastos = Numero(gastos, "Gastos"), .Activo = activo.Checked}
+            Dim p As New ProductoFinanciero With {.Id = CInt(ViewState("ProductoId")), .Codigo = codigo.Text.Trim(), .Nombre = nombre.Text.Trim(), .Descripcion = descripcion.Text.Trim(), .MontoMinimo = Numero(minimo, "Monto mínimo"), .MontoMaximo = Numero(maximo, "Monto máximo"), .CuotasMinimas = Entero(mesesMin, "Plazo mínimo en meses"), .CuotasMaximas = Entero(mesesMax, "Plazo máximo en meses"), .MesesMinimos = Entero(mesesMin, "Plazo mínimo en meses"), .MesesMaximos = Entero(mesesMax, "Plazo máximo en meses"), .TasaAnual = Numero(tasa, "Tasa"), .TipoTasa = tipoTasa.SelectedValue, .CapitalizacionId = Seleccion(capitalizacion), .TipoComision = tipoComision.SelectedValue, .Comision = Numero(comision, "Comisión"), .Gastos = Numero(gastos, "Gastos"), .Activo = activo.Checked}
             p.Metodos = metodos.Items.Cast(Of ListItem)().Where(Function(x) x.Selected).Select(Function(x) CInt(x.Value)).ToList()
-            p.Periodicidades = periodos.Items.Cast(Of ListItem)().Where(Function(x) x.Selected).Select(Function(x) CInt(x.Value)).ToList()
+            p.Periodicidades = ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()
             Dim id = ServicioFinanzas.GuardarProducto(p, Actor.Id)
             ViewState("ProductoId") = id
             CargarListado()

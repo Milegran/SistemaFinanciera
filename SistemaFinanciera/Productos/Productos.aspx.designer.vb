@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Option Explicit On
 Partial Public Class Productos
     Protected WithEvents pnlHeaderProductos As Global.System.Web.UI.WebControls.Panel
@@ -54,8 +54,6 @@ Partial Public Class Productos
     Protected WithEvents descripcion As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents minimo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents maximo As Global.System.Web.UI.WebControls.TextBox
-    Protected WithEvents cuotasMin As Global.System.Web.UI.WebControls.TextBox
-    Protected WithEvents cuotasMax As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents mesesMin As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents mesesMax As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents tasa As Global.System.Web.UI.WebControls.TextBox
@@ -68,4 +66,5 @@ Partial Public Class Productos
     Protected WithEvents periodos As Global.System.Web.UI.WebControls.CheckBoxList
     Protected WithEvents guardar As Global.System.Web.UI.WebControls.Button
     Protected WithEvents nuevo As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents tipoComision As Global.System.Web.UI.WebControls.DropDownList
 End Class

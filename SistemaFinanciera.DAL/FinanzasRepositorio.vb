@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports MySqlConnector
 Imports SistemaFinanciera.Entities
@@ -127,6 +127,8 @@ Public Class FinanzasRepositorio
         Using cn = Abrir()
             Usuario(cn, Nothing, usuarioId)
             Select Case tipo
+                Case "REPORTES_CLIENTES" : Return Tabla(cn, Nothing, "SELECT Id,CONCAT(Identificacion,' · ',NombreCompleto) Nombre FROM v_Clientes ORDER BY NombreCompleto")
+                Case "REPORTES_PRODUCTOS" : Return Tabla(cn, Nothing, "SELECT Id,Nombre FROM ProductosFinancieros ORDER BY Nombre")
                 Case "PRODUCTOS"
                     Return Tabla(cn, Nothing, "SELECT p.*,t.Porcentaje TasaAnual,t.TipoTasa,t.CapitalizacionId FROM ProductosFinancieros p LEFT JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=p.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 ORDER BY t2.Id DESC LIMIT 1) WHERE (@p0=0 OR p.Id=@p0) ORDER BY p.Nombre", id)
                 Case "TASAS"
@@ -134,11 +136,12 @@ Public Class FinanzasRepositorio
                 Case "PRODUCTO_SIMULADOR"
                     Return Tabla(cn, Nothing, "SELECT pr.*,t.Porcentaje TasaAnual,t.TipoTasa,t.CapitalizacionId FROM ProductosFinancieros pr LEFT JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) WHERE pr.Id=@p0 AND pr.Activo=1", id)
                 Case "METODOS" : Return Tabla(cn, Nothing, "SELECT Id,Nombre,Codigo FROM MetodosCalculo WHERE (@p0=0 AND Activo=1) OR Id=@p0 ORDER BY Id", id)
+                Case "PERIODICIDADES_PAGO" : Return Tabla(cn, Nothing, "SELECT p.* FROM Periodicidades p WHERE p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12 ORDER BY p.Id")
                 Case "PERIODICIDADES" : Return Tabla(cn, Nothing, "SELECT * FROM Periodicidades WHERE (@p0=0 AND Activo=1) OR Id=@p0 ORDER BY Id", id)
                 Case "CLIENTES" : Return Tabla(cn, Nothing, "SELECT Id,CONCAT(Identificacion,' · ',Nombres,' ',Apellidos) Nombre FROM Clientes WHERE Activo=1 ORDER BY Nombres")
                 Case "PRODUCTOS_ACTIVOS" : Return Tabla(cn, Nothing, "SELECT Id,Nombre FROM ProductosFinancieros WHERE Activo=1 ORDER BY Nombre")
                 Case "PRODUCTO_METODOS" : Return Tabla(cn, Nothing, "SELECT m.Id,m.Nombre FROM ProductoMetodos pm JOIN MetodosCalculo m ON m.Id=pm.MetodoId WHERE pm.ProductoId=@p0 AND m.Activo=1", id)
-                Case "PRODUCTO_PERIODICIDADES" : Return Tabla(cn, Nothing, "SELECT p.Id,p.Nombre FROM ProductoPeriodicidades pp JOIN Periodicidades p ON p.Id=pp.PeriodicidadId WHERE pp.ProductoId=@p0 AND p.Activo=1", id)
+                Case "PRODUCTO_PERIODICIDADES" : Return Tabla(cn, Nothing, "SELECT p.Id,p.Nombre FROM ProductoPeriodicidades pp JOIN Periodicidades p ON p.Id=pp.PeriodicidadId WHERE pp.ProductoId=@p0 AND p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12", id)
                 Case "SOLICITUDES"
                     Return Tabla(cn, Nothing, "SELECT s.*,CONCAT(c.Nombres,' ',c.Apellidos) Cliente,p.Nombre Producto,m.Nombre Metodo FROM Solicitudes s JOIN Clientes c ON c.Id=s.ClienteId JOIN ProductosFinancieros p ON p.Id=s.ProductoId JOIN MetodosCalculo m ON m.Id=s.MetodoId WHERE (@p0=0 OR s.Id=@p0) ORDER BY s.Id DESC", id)
                 Case "PRESTAMOS"
@@ -146,7 +149,7 @@ Public Class FinanzasRepositorio
                 Case "RESUMEN_CARTERA"
                     Return Tabla(cn, Nothing, "SELECT COALESCE(SUM(MontoAprobado),0) MontoDesembolsado,COUNT(*) PrestamosVigentes FROM Prestamos WHERE FechaDesembolso IS NOT NULL AND EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO')")
                 Case "CUOTAS" : Return Tabla(cn, Nothing, "SELECT * FROM v_SaldosCuota WHERE PrestamoId=@p0 ORDER BY NumeroCuota", id)
-                Case "PAGOS" : Return Tabla(cn, Nothing, "SELECT p.*,pr.NumeroPrestamo,CONCAT(c.Nombres,' ',c.Apellidos) Cliente,u.NombreCompleto Usuario FROM v_PagosDesglosados p JOIN Prestamos pr ON pr.Id=p.PrestamoId JOIN Clientes c ON c.Id=p.ClienteId JOIN Usuarios u ON u.Id=p.RegistradoPor WHERE (@p0=0 OR p.PrestamoId=@p0) ORDER BY p.Id DESC", id)
+                Case "PAGOS" : Return Tabla(cn, Nothing, "SELECT p.*,CONCAT('PRE-',LPAD(pr.Id,GREATEST(6,CHAR_LENGTH(pr.Id)),'0')) AS NumeroPrestamo,CONCAT(c.Nombres,' ',c.Apellidos) Cliente,u.NombreCompleto Usuario FROM v_PagosDesglosados p JOIN Prestamos pr ON pr.Id=p.PrestamoId JOIN Clientes c ON c.Id=p.ClienteId JOIN Usuarios u ON u.Id=p.RegistradoPor WHERE (@p0=0 OR p.PrestamoId=@p0) ORDER BY p.Id DESC", id)
                 Case "MOVIMIENTOS" : Return Tabla(cn, Nothing, "SELECT * FROM v_Reporte07EstadoCuenta WHERE PrestamoId=@p0 ORDER BY Fecha,Id", id)
                 Case "FORMAS" : Return Tabla(cn, Nothing, "SELECT Codigo,Nombre FROM FormasPago WHERE Activo=1 ORDER BY Codigo")
                 Case Else : Throw New ArgumentException("Consulta inválida.")
@@ -185,7 +188,7 @@ Public Class FinanzasRepositorio
             pagosMeses.TableName = "PagosPorMes" : ds.Tables.Add(pagosMeses)
 
             Dim pagosRecientes = Tabla(cn, Nothing,
-                "SELECT p.Id,p.NumeroRecibo,p.FechaPago,p.MontoPagado,pr.NumeroPrestamo,c.NombreCompleto,prod.Nombre Producto " &
+                "SELECT p.Id,p.NumeroRecibo,p.FechaPago,p.MontoPagado,CONCAT('PRE-',LPAD(pr.Id,GREATEST(6,CHAR_LENGTH(pr.Id)),'0')) AS NumeroPrestamo,c.NombreCompleto,prod.Nombre Producto " &
                 "FROM Pagos p JOIN Prestamos pr ON pr.Id=p.PrestamoId JOIN v_Clientes c ON c.Id=p.ClienteId " &
                 "JOIN ProductosFinancieros prod ON prod.Id=pr.ProductoId WHERE p.Estado='APLICADO' " &
                 "ORDER BY p.FechaPago DESC,p.Id DESC LIMIT 5")
@@ -193,7 +196,7 @@ Public Class FinanzasRepositorio
 
             Dim cuotasProximas = Tabla(cn, Nothing,
                 "SELECT q.Id,q.NumeroCuota,q.FechaVencimiento,q.TotalPendiente,DATEDIFF(q.FechaVencimiento,DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) DiasRestantes," &
-                "pr.NumeroPrestamo,c.NombreCompleto,c.Identificacion FROM v_SaldosCuota q JOIN Prestamos pr ON pr.Id=q.PrestamoId " &
+                "CONCAT('PRE-',LPAD(pr.Id,GREATEST(6,CHAR_LENGTH(pr.Id)),'0')) AS NumeroPrestamo,c.NombreCompleto,c.Identificacion FROM v_SaldosCuota q JOIN Prestamos pr ON pr.Id=q.PrestamoId " &
                 "JOIN v_Clientes c ON c.Id=pr.ClienteId CROSS JOIN " & fechas & " " &
                 "WHERE q.FechaVencimiento>=f.Hoy AND q.FechaVencimiento<DATE_ADD(f.Hoy,INTERVAL 10 DAY) AND q.TotalPendiente>0 " &
                 "AND pr.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO') ORDER BY q.FechaVencimiento,q.Id LIMIT 6")
@@ -230,7 +233,7 @@ Public Class FinanzasRepositorio
                 "FROM Prestamos p WHERE p.ClienteId=@p0", clienteId)
             indicadores.TableName = "Indicadores" : ds.Tables.Add(indicadores)
             Dim prestamos = Tabla(cn, Nothing,
-                "SELECT p.Id,p.NumeroPrestamo,prod.Nombre Producto,p.MontoAprobado,p.SaldoCapital,m.Nombre Metodo,per.Nombre Periodicidad," &
+                "SELECT p.Id,CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS NumeroPrestamo,prod.Nombre Producto,p.MontoAprobado,p.SaldoCapital,m.Nombre Metodo,per.Nombre Periodicidad," &
                 "p.CantidadCuotas,p.PlazoMeses,CASE WHEN p.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO') AND p.CuotasVencidas>0 THEN 'EN_MORA' ELSE p.EstadoCodigo END EstadoActual " &
                 "FROM v_PrestamosResumen p JOIN ProductosFinancieros prod ON prod.Id=p.ProductoId " &
                 "JOIN MetodosCalculo m ON m.Id=p.MetodoId JOIN Periodicidades per ON per.Id=p.PeriodicidadId " &
@@ -247,10 +250,47 @@ Public Class FinanzasRepositorio
             Return ds
         End Using
     End Function
+    Public Function CambiarEstadoProducto(id As Integer, activo As Boolean, usuarioId As Integer) As Integer
+        Return Transaccion(Function(cn, tx)
+            Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
+            If Tabla(cn, tx, "SELECT Id FROM ProductosFinancieros WHERE Id=@p0 FOR UPDATE", id).Rows.Count = 0 Then Throw New ArgumentException("Producto inexistente.")
+            Escribir(cn, tx, "UPDATE ProductosFinancieros SET Activo=@p1 WHERE Id=@p0", id, activo)
+            Auditar(cn, tx, usuarioId, "CAMBIAR_ESTADO", "ProductosFinancieros", id, If(activo, "Activo", "Inactivo"))
+            Return id
+        End Function)
+    End Function
+    Public Function EliminarProducto(id As Integer, usuarioId As Integer) As Integer
+        Try
+            Return Transaccion(Function(cn, tx)
+                Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
+                If Tabla(cn, tx, "SELECT Id FROM ProductosFinancieros WHERE Id=@p0 FOR UPDATE", id).Rows.Count = 0 Then Throw New ArgumentException("Producto inexistente.")
+                If Tabla(cn, tx, "SELECT Id FROM Solicitudes WHERE ProductoId=@p0 LIMIT 1", id).Rows.Count > 0 OrElse Tabla(cn, tx, "SELECT Id FROM Prestamos WHERE ProductoId=@p0 LIMIT 1", id).Rows.Count > 0 Then Throw New ArgumentException("Este producto tiene solicitudes o préstamos. Puede desactivarlo, pero no eliminarlo.")
+                Escribir(cn, tx, "DELETE FROM ProductoMetodos WHERE ProductoId=@p0", id)
+                Escribir(cn, tx, "DELETE FROM ProductoPeriodicidades WHERE ProductoId=@p0", id)
+                Escribir(cn, tx, "DELETE FROM Tasas WHERE ProductoId=@p0", id)
+                Escribir(cn, tx, "DELETE FROM ProductosFinancieros WHERE Id=@p0", id)
+                Auditar(cn, tx, usuarioId, "ELIMINAR", "ProductosFinancieros", id, "Producto sin operaciones eliminado")
+                Return id
+            End Function)
+        Catch ex As MySqlException When ex.Number = 1451
+            Throw New ArgumentException("El producto tiene información relacionada y no puede eliminarse. Puede desactivarlo.")
+        End Try
+    End Function
+    Public Shared Function CalcularComision(tipo As String, valor As Decimal, monto As Decimal) As Decimal
+        If valor < 0 OrElse monto < 0 Then Throw New ArgumentException("Comisión o monto inválidos.")
+        If tipo = "PORCENTAJE" Then
+            If valor > 100 Then Throw New ArgumentException("La comisión porcentual no puede superar 100 %.")
+            Return Decimal.Round(monto * valor / 100D, 2, MidpointRounding.AwayFromZero)
+        End If
+        If tipo <> "FIJO" Then Throw New ArgumentException("Tipo de comisión inválido.")
+        Return Decimal.Round(valor, 2, MidpointRounding.AwayFromZero)
+    End Function
     Public Function GuardarProducto(p As ProductoFinanciero, usuarioId As Integer) As Integer
         Return Transaccion(Function(cn, tx)
                                Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
-                               If Tabla(cn, tx, "SELECT Id FROM Periodicidades WHERE Id=@p0 AND Activo=1", p.CapitalizacionId).Rows.Count <> 1 Then Throw New ArgumentException("Seleccione una capitalización activa.")
+                               If p.Periodicidades.Count <> 1 Then Throw New ArgumentException("La periodicidad de pago debe ser únicamente mensual.")
+                               If Tabla(cn, tx, "SELECT Id FROM Periodicidades WHERE Id=@p0 AND Activo=1 AND Unidad='MESES' AND Intervalo=1 AND PeriodosPorAnio=12", p.Periodicidades(0)).Rows.Count <> 1 Then Throw New ArgumentException("Solo se permiten pagos mensuales.")
+                               If Tabla(cn, tx, "SELECT Id FROM Periodicidades WHERE Id=@p0 AND Activo=1 AND Unidad='MESES' AND Intervalo=1 AND PeriodosPorAnio=12", p.CapitalizacionId).Rows.Count <> 1 Then Throw New ArgumentException("La capitalización debe ser mensual.")
                                Dim id = p.Id
                                If id = 0 Then
                                    id = Insertar(cn, tx, "INSERT INTO ProductosFinancieros(Codigo,Nombre,Descripcion,MontoMinimo,MontoMaximo,PlazoMinimo,PlazoMaximo,PlazoMinimoMeses,PlazoMaximoMeses,ValorComision,ValorGastos,Activo) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11)", p.Codigo, p.Nombre, p.Descripcion, p.MontoMinimo, p.MontoMaximo, p.CuotasMinimas, p.CuotasMaximas, p.MesesMinimos, p.MesesMaximos, p.Comision, p.Gastos, p.Activo)
@@ -258,6 +298,8 @@ Public Class FinanzasRepositorio
                                    If Tabla(cn, tx, "SELECT Id FROM ProductosFinancieros WHERE Id=@p0 FOR UPDATE", id).Rows.Count = 0 Then Throw New ArgumentException("Producto inexistente.")
                                    Escribir(cn, tx, "UPDATE ProductosFinancieros SET Codigo=@p1,Nombre=@p2,Descripcion=@p3,MontoMinimo=@p4,MontoMaximo=@p5,PlazoMinimo=@p6,PlazoMaximo=@p7,PlazoMinimoMeses=@p8,PlazoMaximoMeses=@p9,TipoComision='FIJO',TipoGastos='FIJO',ValorComision=@p10,ValorGastos=@p11,Activo=@p12 WHERE Id=@p0", id, p.Codigo, p.Nombre, p.Descripcion, p.MontoMinimo, p.MontoMaximo, p.CuotasMinimas, p.CuotasMaximas, p.MesesMinimos, p.MesesMaximos, p.Comision, p.Gastos, p.Activo)
                                End If
+                               CalcularComision(p.TipoComision, p.Comision, p.MontoMinimo)
+                               Escribir(cn, tx, "UPDATE ProductosFinancieros SET TipoComision=@p1 WHERE Id=@p0", id, p.TipoComision)
                                For Each existente As DataRow In Tabla(cn, tx, "SELECT MetodoId FROM ProductoMetodos WHERE ProductoId=@p0", id).Rows
                                    Dim metodoId = CInt(existente("MetodoId"))
                                    If Not p.Metodos.Contains(metodoId) Then
@@ -324,7 +366,7 @@ Public Class FinanzasRepositorio
                            End Function)
     End Function
     Private Shared Function Contexto(cn As MySqlConnection, tx As MySqlTransaction, s As SolicitudFinanciera) As DataRow
-        Dim t = Tabla(cn, tx, "SELECT pr.*,t.Id TasaId,t.Porcentaje,t.TipoTasa,t.CapitalizacionId,cap.PeriodosPorAnio Capitalizaciones,p.PeriodosPorAnio,p.Unidad,p.Intervalo,m.Codigo Metodo,c.Ingresos FROM ProductosFinancieros pr JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) JOIN Periodicidades cap ON cap.Id=t.CapitalizacionId AND cap.Activo=1 JOIN ProductoMetodos pm ON pm.ProductoId=pr.Id JOIN MetodosCalculo m ON m.Id=pm.MetodoId AND m.Activo=1 JOIN ProductoPeriodicidades pp ON pp.ProductoId=pr.Id JOIN Periodicidades p ON p.Id=pp.PeriodicidadId AND p.Activo=1 JOIN Clientes c ON c.Id=@p3 AND c.Activo=1 WHERE pr.Id=@p0 AND pr.Activo=1 AND m.Id=@p1 AND p.Id=@p2 FOR UPDATE", s.ProductoId, s.MetodoId, s.PeriodicidadId, s.ClienteId)
+        Dim t = Tabla(cn, tx, "SELECT pr.*,t.Id TasaId,t.Porcentaje,t.TipoTasa,t.CapitalizacionId,cap.PeriodosPorAnio Capitalizaciones,p.PeriodosPorAnio,p.Unidad,p.Intervalo,m.Codigo Metodo,c.Ingresos FROM ProductosFinancieros pr JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) JOIN Periodicidades cap ON cap.Id=t.CapitalizacionId AND cap.Activo=1 JOIN ProductoMetodos pm ON pm.ProductoId=pr.Id JOIN MetodosCalculo m ON m.Id=pm.MetodoId AND m.Activo=1 JOIN ProductoPeriodicidades pp ON pp.ProductoId=pr.Id JOIN Periodicidades p ON p.Id=pp.PeriodicidadId AND p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12 JOIN Clientes c ON c.Id=@p3 AND c.Activo=1 WHERE pr.Id=@p0 AND pr.Activo=1 AND m.Id=@p1 AND p.Id=@p2 FOR UPDATE", s.ProductoId, s.MetodoId, s.PeriodicidadId, s.ClienteId)
         If t.Rows.Count <> 1 Then Throw New ArgumentException("Seleccione cliente/producto activos y condiciones permitidas con tasa vigente.")
         Dim r = t.Rows(0), meses = Decimal.Round(s.CantidadCuotas * 12D / CDec(r("PeriodosPorAnio")), 2)
         If s.Monto < CDec(r("MontoMinimo")) OrElse s.Monto > CDec(r("MontoMaximo")) OrElse s.CantidadCuotas < CInt(r("PlazoMinimo")) OrElse s.CantidadCuotas > CInt(r("PlazoMaximo")) OrElse meses < CDec(r("PlazoMinimoMeses")) OrElse meses > CDec(r("PlazoMaximoMeses")) Then Throw New ArgumentException("Monto o plazo fuera de los límites del producto.")
@@ -344,7 +386,7 @@ Public Class FinanzasRepositorio
                                    If CInt(previa("CreadoPor")) <> usuarioId OrElse CInt(previa("ClienteId")) <> s.ClienteId OrElse CInt(previa("ProductoId")) <> s.ProductoId OrElse CInt(previa("MetodoId")) <> s.MetodoId OrElse CInt(previa("PeriodicidadId")) <> s.PeriodicidadId OrElse CDec(previa("MontoSolicitado")) <> s.Monto OrElse CInt(previa("CantidadCuotas")) <> s.CantidadCuotas OrElse CDate(previa("FechaPrimerPago")).Date <> s.FechaPrimerPago.Date OrElse Convert.ToString(previa("Observaciones")) <> If(s.Observaciones, "") Then Throw New InvalidOperationException("Este formulario ya registró otra solicitud. Inicie una nueva.")
                                    Return CInt(previa("Id"))
                                End If
-                               Dim id = Insertar(cn, tx, "INSERT INTO Solicitudes(NumeroSolicitud,ClienteId,ProductoId,MetodoId,TasaId,PeriodicidadId,MontoSolicitado,CantidadCuotas,CreadoPor,Observaciones,PlazoMeses,TasaPactada,TipoTasa,CapitalizacionId,FechaPrimerPago,Comision,GastosAsociados,CuotaEstimada,IngresosEvaluados) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15,@p16,@p17,@p18)", numeroSolicitud, s.ClienteId, s.ProductoId, s.MetodoId, CInt(r("TasaId")), s.PeriodicidadId, s.Monto, s.CantidadCuotas, usuarioId, s.Observaciones, Decimal.Round(s.CantidadCuotas * 12D / condicionesPlan.PeriodosAnuales, 2), condicionesPlan.TasaAnual, condicionesPlan.TipoTasa, CInt(r("CapitalizacionId")), s.FechaPrimerPago, CDec(r("ValorComision")), CDec(r("ValorGastos")), plan.Max(Function(q) q.Cuota), CDec(r("Ingresos")))
+                               Dim id = Insertar(cn, tx, "INSERT INTO Solicitudes(NumeroSolicitud,ClienteId,ProductoId,MetodoId,TasaId,PeriodicidadId,MontoSolicitado,CantidadCuotas,CreadoPor,Observaciones,PlazoMeses,TasaPactada,TipoTasa,CapitalizacionId,FechaPrimerPago,Comision,GastosAsociados,CuotaEstimada,IngresosEvaluados) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15,@p16,@p17,@p18)", numeroSolicitud, s.ClienteId, s.ProductoId, s.MetodoId, CInt(r("TasaId")), s.PeriodicidadId, s.Monto, s.CantidadCuotas, usuarioId, s.Observaciones, Decimal.Round(s.CantidadCuotas * 12D / condicionesPlan.PeriodosAnuales, 2), condicionesPlan.TasaAnual, condicionesPlan.TipoTasa, CInt(r("CapitalizacionId")), s.FechaPrimerPago, CalcularComision(CStr(r("TipoComision")), CDec(r("ValorComision")), s.Monto), CDec(r("ValorGastos")), plan.Max(Function(q) q.Cuota), CDec(r("Ingresos")))
                                Auditar(cn, tx, usuarioId, "CREAR", "Solicitudes", id, "Estado: SOLICITUD")
                                Return id
                            End Function)
@@ -368,7 +410,7 @@ Public Class FinanzasRepositorio
                                    "JOIN ProductoMetodos pm ON pm.ProductoId=pr.Id " &
                                    "JOIN MetodosCalculo m ON m.Id=pm.MetodoId AND m.Activo=1 " &
                                    "JOIN ProductoPeriodicidades pp ON pp.ProductoId=pr.Id " &
-                                   "JOIN Periodicidades p ON p.Id=pp.PeriodicidadId AND p.Activo=1 " &
+                                   "JOIN Periodicidades p ON p.Id=pp.PeriodicidadId AND p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12 " &
                                    "WHERE pr.Id=@p0 AND m.Id=@p1 AND p.Id=@p2 AND pr.Activo=1 " &
                                    "FOR UPDATE",
                                    s.ProductoId, s.MetodoId, s.PeriodicidadId)
@@ -483,5 +525,46 @@ Public Class FinanzasRepositorio
                                Auditar(cn, tx, usuarioId, "PAGAR", "Pagos", id, "Préstamo " & p.PrestamoId & "; capital=" & capitalPagado.ToString(Globalization.CultureInfo.InvariantCulture))
                                Return id
                            End Function)
+    End Function
+
+    Public Function ConsultarReporte(numero As Integer, usuarioId As Integer, desde As Nullable(Of Date), hasta As Nullable(Of Date), clienteId As Integer, productoId As Integer, prestamoId As Integer) As DataTable
+        Using cn = Abrir()
+            Autorizar(cn, Nothing, usuarioId, "ADMINISTRADOR", "OFICIAL_CREDITO", "CAJERO", "CONSULTA")
+            Dim sql As String, fecha As String, orden As String, grupo As String = ""
+            Select Case numero
+                Case 1
+                    sql = "SELECT c.Identificacion AS Identificación,c.NombreCompleto AS Cliente,c.Telefono AS Teléfono,c.Correo,c.Provincia,IF(c.TipoPersona='NATURAL','Natural','Jurídica') AS Tipo,IF(c.Activo=1,'Activo','Inactivo') AS Estado,DATE(c.CreadoUtc-INTERVAL 5 HOUR) AS Registro FROM v_Clientes c WHERE 1=1"
+                    fecha = "DATE(c.CreadoUtc-INTERVAL 5 HOUR)" : orden = "c.NombreCompleto,c.Id"
+                Case 2, 3, 6
+                    sql = "SELECT CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,p.NombreCompleto AS Cliente,p.Producto,p.Metodo AS Método,p.FechaDesembolso AS Desembolso,p.FechaCancelacion AS Cancelación,p.MontoAprobado AS Capital,p.SaldoCapital AS Saldo,p.InteresesProgramadosPendientes AS Intereses,p.MoraPendiente AS Mora,p.CargosPendientes AS Cargos,CASE WHEN p.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO') AND p.CuotasVencidas>0 THEN 'EN_MORA' ELSE p.EstadoCodigo END AS Estado FROM v_PrestamosResumen p WHERE " & If(numero=3,"p.EstadoCodigo='CANCELADO'","p.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO')")
+                    fecha = If(numero=3,"p.FechaCancelacion","p.FechaDesembolso") : orden = "p.Id DESC"
+                Case 4
+                    sql = "SELECT CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,r.NombreCompleto AS Cliente,r.Telefono AS Teléfono,pr.Nombre AS Producto,r.NumeroCuota AS Cuota,r.FechaVencimiento AS Vencimiento,r.DiasAtraso AS Días,r.MontoVencido AS Vencido,r.MoraPendiente AS Mora FROM v_Reporte04PrestamosMora r JOIN Prestamos p ON p.Id=r.PrestamoId JOIN ProductosFinancieros pr ON pr.Id=p.ProductoId WHERE 1=1"
+                    fecha = "r.FechaVencimiento" : orden = "r.FechaVencimiento,p.Id,r.NumeroCuota"
+                Case 5
+                    sql = "SELECT r.NumeroRecibo AS Recibo,CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,r.NombreCompleto AS Cliente,pr.Nombre AS Producto,r.FechaPago AS Fecha,r.MontoPagado AS Pagado,r.Capital,r.Interes AS Intereses,r.Mora,r.OtrosCargos AS Cargos,r.NombreUsuario AS Cajero FROM v_Reporte05PagosPeriodo r JOIN Prestamos p ON p.Id=r.PrestamoId JOIN ProductosFinancieros pr ON pr.Id=p.ProductoId WHERE 1=1"
+                    fecha = "r.FechaPago" : orden = "r.FechaPago DESC,r.Id DESC"
+                Case 7
+                    ' El saldo se calcula en la vista ANTES del filtro de fechas para incluir movimientos anteriores.
+                    sql = "SELECT CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,r.NombreCompleto AS Cliente,r.Fecha,r.Tipo,r.Concepto,r.Debito AS Débito,r.Credito AS Crédito,r.SaldoAcumulado AS Saldo FROM v_Reporte07EstadoCuenta r JOIN Prestamos p ON p.Id=r.PrestamoId WHERE 1=1"
+                    fecha = "r.Fecha" : orden = "r.Fecha,r.Id"
+                Case 8
+                    sql = "SELECT CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,c.NombreCompleto AS Cliente,r.NumeroCuota AS Cuota,r.FechaVencimiento AS Vencimiento,r.Capital,r.Interes AS Intereses,r.InteresCapitalizado AS Capitalizado,r.CuotaProgramada AS Programado,r.Mora,r.OtrosCargos AS Cargos,r.TotalPendiente AS Pendiente,r.SaldoProyectado AS Proyectado,r.EstadoCuota AS Estado FROM v_Reporte08Amortizacion r JOIN Prestamos p ON p.Id=r.PrestamoId JOIN v_Clientes c ON c.Id=p.ClienteId WHERE 1=1"
+                    fecha = "r.FechaVencimiento" : orden = "r.NumeroCuota,r.Id"
+                Case 9
+                    sql = "SELECT p.Producto,CASE WHEN p.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO') AND p.CuotasVencidas>0 THEN 'EN_MORA' ELSE p.EstadoCodigo END AS Estado,COUNT(*) AS Préstamos,SUM(p.MontoAprobado) AS Capital,SUM(p.SaldoCapital) AS Saldo,SUM(p.InteresesProgramadosPendientes) AS Intereses,SUM(p.MoraPendiente) AS Mora FROM v_PrestamosResumen p WHERE p.FechaDesembolso IS NOT NULL"
+                    fecha = "p.FechaDesembolso" : grupo = " GROUP BY p.ProductoId,p.Producto,Estado" : orden = "p.Producto,Estado"
+                Case 10
+                    sql = "SELECT m.Nombre AS Método,COUNT(*) AS Préstamos,SUM(p.MontoAprobado) AS Capital,SUM(p.SaldoCapital) AS Saldo,SUM(COALESCE(q.Intereses,0)) AS Intereses,SUM(COALESCE(q.Mora,0)) AS Mora FROM Prestamos p JOIN MetodosCalculo m ON m.Id=p.MetodoId LEFT JOIN (SELECT PrestamoId,SUM(Interes+InteresCapitalizado) AS Intereses,SUM(Mora) AS Mora FROM Cuotas GROUP BY PrestamoId) q ON q.PrestamoId=p.Id WHERE p.FechaDesembolso IS NOT NULL"
+                    fecha = "p.FechaDesembolso" : grupo = " GROUP BY p.MetodoId,m.Nombre" : orden = "m.Nombre"
+                Case Else
+                    Throw New ArgumentException("Seleccione uno de los reportes disponibles.")
+            End Select
+            sql &= If(numero=1," AND (@p2=0 OR c.Id=@p2)"," AND (@p2=0 OR p.ClienteId=@p2) AND (@p3=0 OR p.ProductoId=@p3) AND (@p4=0 OR p.Id=@p4)")
+            sql &= " AND (@p0 IS NULL OR " & fecha & ">=@p0) AND (@p1 IS NULL OR " & fecha & "<@p1)" & grupo & " ORDER BY " & orden
+            Dim inicio As Object = If(desde.HasValue,CType(desde.GetValueOrDefault().Date,Object),DBNull.Value)
+            Dim fin As Object = If(hasta.HasValue,CType(hasta.GetValueOrDefault().Date.AddDays(1),Object),DBNull.Value)
+            Return Tabla(cn, Nothing, sql, inicio, fin, clienteId, productoId, prestamoId)
+        End Using
     End Function
 End Class

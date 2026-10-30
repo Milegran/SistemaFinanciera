@@ -1,10 +1,10 @@
-<%@ Master Language="VB" AutoEventWireup="true" CodeBehind="Site.master.vb" Inherits="SistemaFinanciera.SiteMaster" %>
+﻿<%@ Master Language="VB" AutoEventWireup="true" CodeBehind="Site.master.vb" Inherits="SistemaFinanciera.SiteMaster" %>
 <!DOCTYPE html><html lang="es"><head runat="server">
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title><%: Page.Title %> | CapitalWest</title>
 <webopt:bundlereference runat="server" path="~/Content/css" />
 <link rel="stylesheet" href="<%= ResolveUrl("~/Content/Financiera.css?v=capitalwest-mysql-2") %>" />
-<link rel="stylesheet" href="<%= ResolveUrl("~/Content/Stitch.css?v=finanzas-53") %>" />
+<link rel="stylesheet" href="<%= ResolveUrl("~/Content/Stitch.css?v=finanzas-55") %>" />
 <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head><body class="<%= If(Request.AppRelativeCurrentExecutionFilePath.ToLowerInvariant().Contains("/clientes/"), "stitch-clients", If(Request.AppRelativeCurrentExecutionFilePath.ToLowerInvariant().Contains("/simulador/"), "stitch-loans stitch-simulator", If(Request.AppRelativeCurrentExecutionFilePath.ToLowerInvariant().Contains("/prestamos/") OrElse Request.AppRelativeCurrentExecutionFilePath.ToLowerInvariant().Contains("/solicitudes/"), "stitch-loans", If(Request.AppRelativeCurrentExecutionFilePath.ToLowerInvariant().Contains("default.aspx"), "stitch-dashboard", "stitch-finance")))) %>"><form id="form1" runat="server"><div class="stitch-shell">
 <asp:ScriptManager runat="server">
@@ -58,6 +58,6 @@
 <div class="cw-main"><main class="page-content" id="mainContent"><asp:ContentPlaceHolder ID="MainContent" runat="server" /></main>
 <footer class="cw-footer"><span>CapitalWest <span class="footer-dot">·</span> Sistema de gestión financiera</span><span>Moneda Balboas (B/.) <span class="footer-dot">·</span> Panamá</span></footer></div>
 <script src="<%= ResolveUrl("~/Scripts/CapitalWest.js?v=stitch3") %>"></script>
-<script src="<%= ResolveUrl("~/Scripts/FinanzasFormularios.js?v=2") %>"></script>
+<script src="<%= ResolveUrl("~/Scripts/FinanzasFormularios.js?v=3") %>"></script>
 </div></form></body></html>
 

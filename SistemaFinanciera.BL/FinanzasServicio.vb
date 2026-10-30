@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Security.Cryptography
 Imports System.Text.RegularExpressions
@@ -18,7 +18,29 @@ Public Class FinanzasServicio
         Return repo.ObtenerUsuario(id)
     End Function
     Public Function Consultar(tipo As String, usuarioId As Integer, Optional id As Integer = 0) As DataTable
-        Return repo.Consultar(tipo, usuarioId, id)
+        Dim datos = repo.Consultar(tipo, usuarioId, id)
+        If tipo = "SOLICITUDES" Then
+            ' La clave persistida conserva la idempotencia; el folio visible usa el Id único.
+            datos.Columns.Add("NumeroSolicitudInterno", GetType(String))
+            For Each fila As DataRow In datos.Rows
+                fila("NumeroSolicitudInterno") = fila("NumeroSolicitud")
+                fila("NumeroSolicitud") = NumeroSolicitudVisible(CInt(fila("Id")))
+            Next
+        End If
+        If tipo = "PRESTAMOS" Then
+            For Each fila As DataRow In datos.Rows
+                fila("NumeroPrestamo") = NumeroPrestamoVisible(CInt(fila("Id")))
+            Next
+        End If
+        Return datos
+    End Function
+    Public Shared Function NumeroPrestamoVisible(id As Integer) As String
+        If id <= 0 Then Throw New ArgumentOutOfRangeException(NameOf(id))
+        Return "PRE-" & id.ToString("D6", Globalization.CultureInfo.InvariantCulture)
+    End Function
+    Public Shared Function NumeroSolicitudVisible(id As Integer) As String
+        If id <= 0 Then Throw New ArgumentOutOfRangeException(NameOf(id))
+        Return "SOL-" & id.ToString("D6", Globalization.CultureInfo.InvariantCulture)
     End Function
     Public Function ObtenerResumenDashboard(usuarioId As Integer) As DataSet
         Return repo.ObtenerResumenDashboard(usuarioId)
@@ -101,15 +123,24 @@ Public Class FinanzasServicio
     Public Shared Sub Importe(valor As Decimal, nombre As String, Optional permiteCero As Boolean = False)
         If valor < If(permiteCero, 0D, 0.01D) OrElse valor > 999999999999.99D OrElse MotorPrestamos.Dinero(valor) <> valor Then Throw New ArgumentException(nombre & ": use un importe válido con máximo dos decimales.")
     End Sub
+    Public Sub CambiarEstadoProducto(id As Integer, activo As Boolean, usuarioId As Integer)
+        If id <= 0 Then Throw New ArgumentException("Seleccione un producto.")
+        repo.CambiarEstadoProducto(id, activo, usuarioId)
+    End Sub
+    Public Sub EliminarProducto(id As Integer, usuarioId As Integer)
+        If id <= 0 Then Throw New ArgumentException("Seleccione un producto.")
+        repo.EliminarProducto(id, usuarioId)
+    End Sub
     Public Function GuardarProducto(p As ProductoFinanciero, usuarioId As Integer) As Integer
         If p Is Nothing Then Throw New ArgumentException("Producto requerido.")
         ValidarDatosProducto(p.Codigo, p.Nombre, p.Descripcion)
         p.Codigo = If(p.Codigo, "").Trim().ToUpperInvariant()
         Importe(p.MontoMinimo, "Monto mínimo") : Importe(p.MontoMaximo, "Monto máximo")
         Importe(p.Comision, "Comisión", True) : Importe(p.Gastos, "Gastos", True)
-        If p.MontoMaximo < p.MontoMinimo OrElse p.CuotasMinimas < 1 OrElse p.CuotasMaximas < p.CuotasMinimas OrElse p.CuotasMaximas > 1200 OrElse p.MesesMinimos <= 0 OrElse p.MesesMaximos < p.MesesMinimos OrElse p.MesesMaximos > 1200 OrElse Decimal.Round(p.MesesMinimos, 2) <> p.MesesMinimos OrElse Decimal.Round(p.MesesMaximos, 2) <> p.MesesMaximos Then Throw New ArgumentException("Revise los rangos de monto, cuotas y meses (hasta 1200).")
+        If p.MontoMaximo < p.MontoMinimo Then Throw New ArgumentException("El monto máximo debe ser mayor o igual al mínimo.")
+        If p.CuotasMinimas < 1 OrElse p.CuotasMaximas < p.CuotasMinimas OrElse p.CuotasMaximas > 120 OrElse p.MesesMinimos < 1 OrElse p.MesesMaximos < p.MesesMinimos OrElse p.MesesMaximos > 120 OrElse Decimal.Truncate(p.MesesMinimos) <> p.MesesMinimos OrElse Decimal.Truncate(p.MesesMaximos) <> p.MesesMaximos Then Throw New ArgumentException("Rango de plazo permitido: 1 a 120 meses, sin decimales. El máximo debe ser mayor o igual al mínimo.")
         If p.TasaAnual < 0 OrElse p.TasaAnual > 100 OrElse Decimal.Round(p.TasaAnual, 6) <> p.TasaAnual OrElse Not {"NOMINAL_ANUAL", "EFECTIVA_ANUAL"}.Contains(p.TipoTasa) OrElse p.CapitalizacionId <= 0 Then Throw New ArgumentException("Revise tasa anual (0–100 %, hasta seis decimales) y capitalización.")
-        If p.Comision + p.Gastos > p.MontoMinimo OrElse p.Comision > 99999999.99D OrElse p.Gastos > 99999999.99D Then Throw New ArgumentException("Los costos fijos no pueden superar el monto mínimo.")
+        If FinanzasRepositorio.CalcularComision(p.TipoComision, p.Comision, p.MontoMinimo) + p.Gastos > p.MontoMinimo OrElse p.Comision > 99999999.99D OrElse p.Gastos > 99999999.99D Then Throw New ArgumentException("La comisión calculada y los gastos no pueden superar el monto mínimo.")
         If p.Metodos.Count = 0 OrElse p.Periodicidades.Count = 0 Then Throw New ArgumentException("Seleccione al menos un método y una periodicidad.")
         Return repo.GuardarProducto(p, usuarioId)
     End Function
@@ -143,13 +174,13 @@ Public Class FinanzasServicio
         Return repo.Simular(s, usuarioId, AddressOf motor.Generar)
     End Function
     Public Function SimularProducto(s As SolicitudFinanciera, usuarioId As Integer) As List(Of CuotaPlan)
-        If s Is Nothing OrElse s.ProductoId <= 0 OrElse s.MetodoId <= 0 OrElse s.PeriodicidadId <= 0 OrElse s.CantidadCuotas < 1 OrElse s.CantidadCuotas > 1200 Then Throw New ArgumentException("Seleccione producto, método, periodicidad y una cantidad de cuotas válida.")
+        If s Is Nothing OrElse s.ProductoId <= 0 OrElse s.MetodoId <= 0 OrElse s.PeriodicidadId <= 0 OrElse s.CantidadCuotas < 1 OrElse s.CantidadCuotas > 120 Then Throw New ArgumentException("Seleccione producto, método, periodicidad y una cantidad de cuotas válida.")
         Importe(s.Monto, "Monto solicitado")
         If s.FechaPrimerPago <= ClienteServicio.HoyPanama OrElse s.FechaPrimerPago > ClienteServicio.HoyPanama.AddYears(2) Then Throw New ArgumentException("El primer pago debe ser futuro y estar dentro de los próximos dos años.")
         Return repo.SimularProducto(s, usuarioId, AddressOf motor.Generar)
     End Function
     Private Shared Sub ValidarSolicitud(s As SolicitudFinanciera)
-        If s Is Nothing OrElse s.ClienteId <= 0 OrElse s.ProductoId <= 0 OrElse s.MetodoId <= 0 OrElse s.PeriodicidadId <= 0 OrElse s.CantidadCuotas < 1 OrElse s.CantidadCuotas > 1200 Then Throw New ArgumentException("Seleccione cliente, producto, método, periodicidad y cantidad de cuotas.")
+        If s Is Nothing OrElse s.ClienteId <= 0 OrElse s.ProductoId <= 0 OrElse s.MetodoId <= 0 OrElse s.PeriodicidadId <= 0 OrElse s.CantidadCuotas < 1 OrElse s.CantidadCuotas > 120 Then Throw New ArgumentException("Seleccione cliente, producto, método, periodicidad y cantidad de cuotas.")
         Importe(s.Monto, "Monto solicitado")
         If Not String.IsNullOrEmpty(s.Clave) AndAlso Not Regex.IsMatch(s.Clave, "^[a-f0-9]{32}$") Then Throw New ArgumentException("Vuelva a abrir la solicitud.")
         TextoConLetras(s.Observaciones, "Observaciones", 1000, False)
@@ -171,5 +202,17 @@ Public Class FinanzasServicio
         If Not {"EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA"}.Contains(p.Forma) Then Throw New ArgumentException("Forma de pago inválida.")
         If p.Forma <> "EFECTIVO" Then Texto(p.Referencia, "Referencia de la operación", 100)
         Return repo.RegistrarPago(p, usuarioId)
+    End Function
+
+    Public Function ConsultarReporte(numero As Integer, usuarioId As Integer, desde As Nullable(Of Date), hasta As Nullable(Of Date), clienteId As Integer, productoId As Integer, prestamoId As Integer) As DataTable
+        If numero<1 OrElse numero>10 Then Throw New ArgumentException("Seleccione un reporte válido.")
+        If clienteId<0 OrElse productoId<0 OrElse prestamoId<0 Then Throw New ArgumentException("Seleccione filtros válidos.")
+        For Each fecha In New Nullable(Of Date)() {desde,hasta}
+            If fecha.HasValue AndAlso (fecha.Value.Year<1900 OrElse fecha.Value.Year>2099) Then Throw New ArgumentException("Las fechas deben estar entre 1900 y 2099.")
+        Next
+        If desde.HasValue AndAlso hasta.HasValue AndAlso desde.Value.Date>hasta.Value.Date Then Throw New ArgumentException("La fecha inicial no puede ser posterior a la final.")
+        If (numero=7 OrElse numero=8) AndAlso prestamoId=0 Then Throw New ArgumentException("Seleccione un préstamo para generar este reporte.")
+        If numero=1 AndAlso (productoId<>0 OrElse prestamoId<>0) Then Throw New ArgumentException("El directorio de clientes se filtra por cliente y fecha de registro.")
+        Return repo.ConsultarReporte(numero, usuarioId, desde, hasta, clienteId, productoId, prestamoId)
     End Function
 End Class

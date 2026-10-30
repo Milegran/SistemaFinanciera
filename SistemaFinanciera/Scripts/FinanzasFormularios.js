@@ -159,6 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // Botón cerrar de las alertas del sistema (.alert-success / .alert-danger).
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.alert').forEach(box => {
+        if (!box.textContent.trim()) {
+            box.setAttribute('hidden', '');
+            return;
+        }
         if (box.querySelector('.alert-close')) return;
         const btn = document.createElement('button');
         btn.type = 'button';

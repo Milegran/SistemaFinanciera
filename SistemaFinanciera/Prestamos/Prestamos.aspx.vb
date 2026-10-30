@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports SistemaFinanciera.BL
 Public Class Prestamos
@@ -43,7 +43,7 @@ Public Class Prestamos
             Dim id = ServicioFinanzas.Formalizar(Seleccion(solicitud), CULng(ViewState("Version")), Fecha(primerPago), Actor.Id)
             Listar() : condiciones.Text = "" : ViewState.Remove("Version")
             desembolsar.Enabled = False
-            Notificar("Préstamo formalizado y desembolsado. Número interno " & id & ". Selecciónelo para consultar el contrato y las cuotas.")
+            Notificar("Préstamo formalizado y desembolsado. Número " & FinanzasServicio.NumeroPrestamoVisible(id) & ". Selecciónelo para consultar el contrato y las cuotas.")
         End Sub)
     End Sub
     Protected Sub Ver(sender As Object, e As GridViewCommandEventArgs) Handles listado.RowCommand

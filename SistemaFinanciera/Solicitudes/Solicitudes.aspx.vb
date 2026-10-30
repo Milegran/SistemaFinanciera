@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Globalization
 Imports System.Linq
@@ -15,6 +15,11 @@ Public Class Solicitudes
         End Get
     End Property
     Protected Sub Cargar(sender As Object, e As EventArgs) Handles Me.Load
+        mensaje.Text = String.Empty
+        mensajeEvaluacion.Text = String.Empty
+        pnlMensajeEvaluacion.Visible = False
+        pnlMensajeCreacion.Visible = False
+        mensajeCreacion.Text = String.Empty
         creacion.Visible = Actor.Puede("ADMINISTRADOR", "OFICIAL_CREDITO")
         headerNueva.Visible = creacion.Visible
         If modalAbierto.Value = "1" AndAlso creacion.Visible Then
@@ -26,11 +31,42 @@ Public Class Solicitudes
             ViewState("ClaveSolicitud") = Guid.NewGuid().ToString("N")
             Lista(cliente, ServicioFinanzas.Consultar("CLIENTES", Actor.Id))
             Lista(producto, ServicioFinanzas.Consultar("PRODUCTOS_ACTIVOS", Actor.Id))
+            CargarMensual()
+            ReiniciarPlazo()
+            metodo.Items.Clear()
+            metodo.Items.Add(New ListItem("Seleccione primero un producto", ""))
             primerPago.Text = SistemaFinanciera.BL.ClienteServicio.HoyPanama.AddMonths(1).ToString("yyyy-MM-dd")
             primerPago.Attributes("min") = SistemaFinanciera.BL.ClienteServicio.HoyPanama.AddDays(1).ToString("yyyy-MM-dd")
             primerPago.Attributes("max") = SistemaFinanciera.BL.ClienteServicio.HoyPanama.AddYears(2).ToString("yyyy-MM-dd")
             Listar()
         End Sub)
+        If Not IsPostBack AndAlso Session("SolicitudRegistrada") IsNot Nothing Then
+            Dim registrada = CInt(Session("SolicitudRegistrada"))
+            Session.Remove("SolicitudRegistrada")
+            Notificar("Solicitud " & FinanzasServicio.NumeroSolicitudVisible(registrada) & " registrada correctamente. Puede crear una nueva solicitud.")
+        End If
+    End Sub
+    Protected Overrides Sub OnPreRender(e As EventArgs)
+        If modalAbierto.Value = "1" AndAlso creacion.Visible AndAlso Not String.IsNullOrWhiteSpace(mensaje.Text) Then
+            pnlMensajeCreacion.Visible = True
+            pnlMensajeCreacion.Attributes("class") = pnlMensaje.Attributes("class")
+            mensajeCreacion.Text = mensaje.Text
+            mensaje.Text = String.Empty
+        ElseIf evaluacion.Visible AndAlso Not String.IsNullOrWhiteSpace(mensaje.Text) Then
+            pnlMensajeEvaluacion.Visible = True
+            pnlMensajeEvaluacion.Attributes("class") = pnlMensaje.Attributes("class")
+            mensajeEvaluacion.Text = mensaje.Text
+            mensaje.Text = String.Empty
+            ClientScript.RegisterStartupScript(Me.GetType(), "confirmacionEvaluacion",
+                "document.addEventListener('DOMContentLoaded',function(){var aviso=document.getElementById('" & pnlMensajeEvaluacion.ClientID & "');if(aviso){aviso.focus({preventScroll:true});aviso.scrollIntoView({block:'center'});}});", True)
+        End If
+        If pnlListadoSolicitudes.Visible AndAlso Not String.IsNullOrWhiteSpace(mensaje.Text) Then
+            pnlMensaje.Attributes("tabindex") = "-1"
+            pnlMensaje.Style("scroll-margin-top") = "150px"
+            ClientScript.RegisterStartupScript(Me.GetType(), "confirmacionRegistro",
+                "document.addEventListener('DOMContentLoaded',function(){var aviso=document.getElementById('" & pnlMensaje.ClientID & "');if(aviso){aviso.focus({preventScroll:true});aviso.scrollIntoView({block:'center'});}});", True)
+        End If
+        MyBase.OnPreRender(e)
     End Sub
     Private Sub Listar()
         Dim todas = ServicioFinanzas.Consultar("SOLICITUDES", Actor.Id)
@@ -141,19 +177,49 @@ Public Class Solicitudes
     Protected Sub ProductoCambiado(sender As Object, e As EventArgs) Handles producto.SelectedIndexChanged
         AbrirModalSolicitud()
         Ejecutar(Sub()
+            ReiniciarPlazo()
+            CargarMensual()
+            metodo.Items.Clear()
+            metodo.Items.Add(New ListItem("Seleccione primero un producto", ""))
+            If String.IsNullOrEmpty(producto.SelectedValue) Then Return
             Dim id = Seleccion(producto)
             Lista(metodo, ServicioFinanzas.Consultar("PRODUCTO_METODOS", Actor.Id, id))
-            Lista(periodo, ServicioFinanzas.Consultar("PRODUCTO_PERIODICIDADES", Actor.Id, id))
+            Dim permitidas = ServicioFinanzas.Consultar("PRODUCTO_PERIODICIDADES", Actor.Id, id)
+            If permitidas.Rows.Count = 0 Then Throw New ArgumentException("El producto debe tener habilitada la periodicidad mensual.")
             Dim condicionesProducto = Fila(ServicioFinanzas.Consultar("PRODUCTOS", Actor.Id, id))
             monto.Attributes("min") = Dinero(condicionesProducto("MontoMinimo"))
             monto.Attributes("max") = Dinero(condicionesProducto("MontoMaximo"))
-            cuotas.Attributes("min") = Convert.ToString(condicionesProducto("PlazoMinimo"), Globalization.CultureInfo.InvariantCulture)
-            cuotas.Attributes("max") = Convert.ToString(condicionesProducto("PlazoMaximo"), Globalization.CultureInfo.InvariantCulture)
+            Dim minimo = Math.Max(CInt(condicionesProducto("PlazoMinimo")), CInt(Math.Ceiling(CDec(condicionesProducto("PlazoMinimoMeses")))))
+            Dim maximo = Math.Min(CInt(condicionesProducto("PlazoMaximo")), CInt(Math.Floor(CDec(condicionesProducto("PlazoMaximoMeses")))))
+            minimo = Math.Max(1, minimo)
+            maximo = Math.Min(120, maximo)
+            If minimo > maximo Then Throw New ArgumentException("El producto no tiene plazos mensuales válidos. Revise sus límites en Productos.")
+            cuotas.Items.Clear()
+            cuotas.Items.Add(New ListItem("Seleccione el plazo", ""))
+            For meses As Integer = minimo To maximo
+                cuotas.Items.Add(New ListItem(meses.ToString() & " meses · " & meses.ToString() & " cuotas mensuales", meses.ToString(CultureInfo.InvariantCulture)))
+            Next
+            cuotas.Enabled = True
+            ayudaPlazo.Text = "Plazos permitidos: " & minimo.ToString() & "–" & maximo.ToString() & " meses. Una cuota por mes."
             simulacion.Visible = False
         End Sub)
     End Sub
+    Private Sub CargarMensual()
+        Dim mensual = ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id)
+        periodo.Items.Clear()
+        If mensual.Rows.Count = 0 Then Throw New InvalidOperationException("No está configurada la periodicidad mensual.")
+        periodo.Items.Add(New ListItem("Mensual", Convert.ToString(mensual.Rows(0)("Id"), CultureInfo.InvariantCulture)))
+        periodo.SelectedIndex = 0
+        periodo.Enabled = False
+    End Sub
+    Private Sub ReiniciarPlazo()
+        cuotas.Items.Clear()
+        cuotas.Items.Add(New ListItem("Seleccione primero un producto", ""))
+        cuotas.Enabled = False
+        ayudaPlazo.Text = "El plazo determina la cantidad de cuotas mensuales."
+    End Sub
     Private Function Datos() As SolicitudFinanciera
-        Return New SolicitudFinanciera With {.Clave = CStr(ViewState("ClaveSolicitud")), .ClienteId = Seleccion(cliente), .ProductoId = Seleccion(producto), .MetodoId = Seleccion(metodo), .PeriodicidadId = Seleccion(periodo), .Monto = Numero(monto, "Monto"), .CantidadCuotas = Entero(cuotas, "Cuotas"), .FechaPrimerPago = Fecha(primerPago), .Observaciones = observaciones.Text.Trim()}
+        Return New SolicitudFinanciera With {.Clave = CStr(ViewState("ClaveSolicitud")), .ClienteId = Seleccion(cliente), .ProductoId = Seleccion(producto), .MetodoId = Seleccion(metodo), .PeriodicidadId = Seleccion(periodo), .Monto = Numero(monto, "Monto"), .CantidadCuotas = Seleccion(cuotas), .FechaPrimerPago = Fecha(primerPago), .Observaciones = observaciones.Text.Trim()}
     End Function
     Protected Sub SimularClick(sender As Object, e As EventArgs) Handles simular.Click
         AbrirModalSolicitud()
@@ -168,8 +234,11 @@ Public Class Solicitudes
         AbrirModalSolicitud()
         Ejecutar(Sub()
             Dim id = ServicioFinanzas.CrearSolicitud(Datos(), Actor.Id)
-            Listar() : crear.Enabled = False
-            Notificar("Solicitud registrada (" & id & "). Use Nueva solicitud para registrar otra.")
+            ' Redirigir después del guardado evita reenviar el POST al actualizar.
+            ' El GET inicializa un formulario vacío y una clave nueva de idempotencia.
+            Session("SolicitudRegistrada") = id
+            Response.Redirect(ResolveUrl("~/Solicitudes/Solicitudes.aspx"), False)
+            Context.ApplicationInstance.CompleteRequest()
         End Sub)
     End Sub
     Private Sub AbrirModalSolicitud()
@@ -195,6 +264,7 @@ Public Class Solicitudes
         Return (partes(0).Substring(0, 1) & partes(1).Substring(0, 1)).ToUpperInvariant()
     End Function
     Private Sub MostrarDetalle(id As Integer)
+        tablaDetallePlan.PageIndex = 0
         Dim r = Fila(ServicioFinanzas.Consultar("SOLICITUDES", Actor.Id, id))
         Dim clienteDetalle = ServicioClientes.Obtener(CInt(r("ClienteId")))
         Dim perfilCliente = ServicioFinanzas.ObtenerPerfilCliente(Actor.Id, clienteDetalle.Id)
@@ -263,6 +333,17 @@ Public Class Solicitudes
             Vincular(tablaDetallePlan, New List(Of CuotaPlan)())
         End If
     End Sub
+    Protected Sub CambiarPaginaDetalle(sender As Object, e As GridViewPageEventArgs) Handles tablaDetallePlan.PageIndexChanging
+        Ejecutar(Sub()
+            If ViewState("SolicitudId") Is Nothing Then Throw New InvalidOperationException("Seleccione una solicitud para consultar sus cuotas.")
+            Dim r = Fila(ServicioFinanzas.Consultar("SOLICITUDES", Actor.Id, CInt(ViewState("SolicitudId"))))
+            Dim plan = GenerarPlanSolicitud(r)
+            Dim ultimaPagina = Math.Max(0, (plan.Count - 1) \ tablaDetallePlan.PageSize)
+            tablaDetallePlan.PageIndex = Math.Max(0, Math.Min(e.NewPageIndex, ultimaPagina))
+            ' Solo se vinculan las cuotas: no se reinicia el monto ni el motivo de evaluación.
+            Vincular(tablaDetallePlan, plan)
+        End Sub)
+    End Sub
     Private Function PeriodicidadSolicitud(r As DataRow) As String
         If r.Table.Columns.Contains("Periodicidad") Then Return TextoDato(r("Periodicidad"))
         Dim opciones = ServicioFinanzas.Consultar("PERIODICIDADES", Actor.Id, CInt(r("PeriodicidadId")))
@@ -313,7 +394,15 @@ Public Class Solicitudes
             ServicioFinanzas.Evaluar(id, CULng(ViewState("SolicitudVersion")), estado, If(estado = "APROBADO", Numero(aprobado, "Monto aprobado"), 0D), motivo.Text.Trim(), Actor.Id)
             Listar()
             MostrarDetalle(id)
-            Notificar("Solicitud actualizada: " & estado & ".")
+            Dim folio = FinanzasServicio.NumeroSolicitudVisible(id)
+            Select Case estado
+                Case "APROBADO"
+                    Notificar("Solicitud " & folio & " aprobada correctamente. Ya está disponible para formalizar el préstamo.")
+                Case "RECHAZADO"
+                    Notificar("Solicitud " & folio & " rechazada. La decisión quedó registrada.")
+                Case Else
+                    Notificar("Se inició la evaluación de la solicitud " & folio & ".")
+            End Select
         End Sub)
     End Sub
     Protected Sub EvaluarClick(sender As Object, e As EventArgs) Handles evaluar.Click

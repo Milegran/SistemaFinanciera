@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Public Class UsuarioFinanzas
     Public Property Id As Integer
     Public Property Nombre As String
@@ -24,6 +24,7 @@ Public Class ProductoFinanciero
     Public Property TasaAnual As Decimal
     Public Property TipoTasa As String
     Public Property CapitalizacionId As Integer
+    Public Property TipoComision As String = "FIJO"
     Public Property Comision As Decimal
     Public Property Gastos As Decimal
 End Class

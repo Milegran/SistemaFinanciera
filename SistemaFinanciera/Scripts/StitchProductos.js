@@ -1,4 +1,4 @@
-// Pestañas Productos/Tasas + modales (solo presentación; la lógica de guardado sigue en el servidor).
+﻿// Pestañas Productos/Tasas + modales (solo presentación; la lógica de guardado sigue en el servidor).
 document.addEventListener('DOMContentLoaded', () => {
     // Confirmación de cambio de estado, con el mismo diálogo accesible que Clientes.
     const confirmOverlay = document.querySelector('[data-product-confirm]');
@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return true;
             }
             pendingTrigger = trigger;
+            const isDelete = trigger.dataset.confirmAction === 'eliminar';
             const isReactivate = trigger.dataset.confirmAction === 'reactivar';
             confirmOverlay.classList.toggle('is-reactivate', isReactivate);
             confirmTitle.textContent = isReactivate ? '¿Reactivar producto?' : '¿Desactivar producto?';
@@ -32,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? 'El producto volverá a estar disponible para nuevas solicitudes. Los préstamos e historiales existentes se conservarán.'
                 : 'El producto dejará de estar disponible para nuevas solicitudes. Los préstamos e historiales existentes se conservarán.';
             confirmAccept.textContent = isReactivate ? 'Reactivar producto' : 'Desactivar producto';
+            if (isDelete) {
+                confirmTitle.textContent = '¿Eliminar producto?';
+                confirmMessage.textContent = 'Se eliminarán el producto y sus tasas. Esta acción no se puede deshacer y solo está permitida si no tiene solicitudes ni préstamos asociados.';
+                confirmAccept.textContent = 'Eliminar producto';
+            }
             priorOverflow = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             confirmOverlay.hidden = false;

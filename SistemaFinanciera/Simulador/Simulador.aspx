@@ -11,9 +11,9 @@
         <div class="finance-fields simulator-fields">
             <div class="finance-field"><label for="<%= producto.ClientID %>">Producto financiero</label><asp:DropDownList ID="producto" runat="server" CssClass="form-select" AutoPostBack="true" required="required" /></div>
             <div class="finance-field"><label for="<%= metodo.ClientID %>">Método de cálculo</label><asp:DropDownList ID="metodo" runat="server" CssClass="form-select" required="required" /></div>
-            <div class="finance-field"><label for="<%= periodo.ClientID %>">Periodicidad de pago</label><asp:DropDownList ID="periodo" runat="server" CssClass="form-select" required="required" /></div>
+            <div class="finance-field"><label for="<%= periodo.ClientID %>">Periodicidad de pago</label><asp:DropDownList ID="periodo" runat="server" CssClass="form-select" Enabled="false" /></div>
             <div class="finance-field"><label for="<%= monto.ClientID %>">Monto a simular (B/.)</label><asp:TextBox ID="monto" runat="server" CssClass="form-control simulator-numeric" TextMode="SingleLine" inputmode="decimal" maxlength="15" pattern="\d{1,12}(\.\d{1,2})?" data-decimal-limit="12,2" required="required" placeholder="Ej. 2500.00" /></div>
-            <div class="finance-field"><label for="<%= cuotas.ClientID %>">Cantidad de cuotas</label><asp:TextBox ID="cuotas" runat="server" CssClass="form-control simulator-numeric" TextMode="SingleLine" inputmode="decimal" maxlength="15" pattern="\d{1,12}(\.0{1,2})?" data-decimal-limit="12,2" required="required" placeholder="Ej. 24" /></div>
+            <div class="finance-field"><label for="<%= cuotas.ClientID %>">Plazo solicitado (meses)</label><asp:DropDownList ID="cuotas" runat="server" CssClass="form-select" Enabled="false" required="required" /></div>
             <div class="finance-field"><label for="<%= primerPago.ClientID %>">Fecha estimada del primer pago</label><asp:TextBox ID="primerPago" runat="server" CssClass="form-control" TextMode="Date" required="required" /></div>
         </div>
         <div class="simulator-product-info"><span class="simulator-info-dot" aria-hidden="true"></span><asp:Literal ID="condicionesProducto" runat="server" Mode="Encode" /></div>

@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Collections.Generic
 Imports System.Globalization
@@ -12,6 +12,8 @@ Public Class Simulador
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         If Not IsPostBack Then
             Ejecutar(Sub()
+                ReiniciarPlazo()
+                CargarMensual()
                 Lista(producto, ServicioFinanzas.Consultar("PRODUCTOS_ACTIVOS", Actor.Id))
                 If producto.Items.Count > 1 Then
                     producto.SelectedIndex = 1
@@ -29,12 +31,17 @@ Public Class Simulador
     End Sub
 
     Private Sub CargarOpcionesProducto()
+        ReiniciarPlazo()
+        CargarMensual()
+        resultados.Visible = False
+        panelComparacion.Visible = False
+        simular.Enabled = False
+        Session.Remove("SimuladorPlan")
         Dim id As Integer
         If Not Integer.TryParse(producto.SelectedValue, id) OrElse id <= 0 Then
             metodo.Items.Clear()
             metodo.Items.Add(New ListItem("Seleccione producto", ""))
-            periodo.Items.Clear()
-            periodo.Items.Add(New ListItem("Seleccione producto", ""))
+
             condicionesProducto.Text = "Selecciona un producto activo para consultar sus condiciones."
             simular.Enabled = False
             Return
@@ -43,7 +50,7 @@ Public Class Simulador
         Dim metodosPermitidos = ServicioFinanzas.Consultar("PRODUCTO_METODOS", Actor.Id, id)
         Dim periodosPermitidos = ServicioFinanzas.Consultar("PRODUCTO_PERIODICIDADES", Actor.Id, id)
         Lista(metodo, metodosPermitidos)
-        Lista(periodo, periodosPermitidos)
+        If periodosPermitidos.Rows.Count = 0 Then Throw New ArgumentException("El producto debe permitir pagos mensuales.")
         If metodo.Items.Count > 1 Then metodo.SelectedIndex = 1
         If periodo.Items.Count > 1 Then periodo.SelectedIndex = 1
 
@@ -53,9 +60,18 @@ Public Class Simulador
         monto.Attributes("min") = minimo.ToString("0.00", CultureInfo.InvariantCulture)
         monto.Attributes("max") = maximo.ToString("0.00", CultureInfo.InvariantCulture)
         If String.IsNullOrWhiteSpace(monto.Text) Then monto.Text = Math.Min(maximo, Math.Max(minimo, 1000D)).ToString("0.00", CultureInfo.InvariantCulture)
-        cuotas.Attributes("min") = CInt(datosProducto("PlazoMinimo")).ToString(CultureInfo.InvariantCulture)
-        cuotas.Attributes("max") = CInt(datosProducto("PlazoMaximo")).ToString(CultureInfo.InvariantCulture)
-        If String.IsNullOrWhiteSpace(cuotas.Text) Then cuotas.Text = Math.Min(CInt(datosProducto("PlazoMaximo")), Math.Max(CInt(datosProducto("PlazoMinimo")), 12)).ToString(CultureInfo.InvariantCulture)
+        Dim plazoMinimo = Math.Max(CInt(datosProducto("PlazoMinimo")), CInt(Math.Ceiling(CDec(datosProducto("PlazoMinimoMeses")))))
+        Dim plazoMaximo = Math.Min(CInt(datosProducto("PlazoMaximo")), CInt(Math.Floor(CDec(datosProducto("PlazoMaximoMeses")))))
+        plazoMinimo = Math.Max(1, plazoMinimo)
+        plazoMaximo = Math.Min(120, plazoMaximo)
+        If plazoMinimo > plazoMaximo Then Throw New ArgumentException("El producto no tiene plazos mensuales válidos. Revise sus límites en Productos.")
+        cuotas.Items.Clear()
+        cuotas.Items.Add(New ListItem("Seleccione el plazo", ""))
+        For meses As Integer = plazoMinimo To plazoMaximo
+            cuotas.Items.Add(New ListItem(meses.ToString() & " meses · " & meses.ToString() & " cuotas mensuales", meses.ToString(CultureInfo.InvariantCulture)))
+        Next
+        cuotas.Enabled = True
+        cuotas.SelectedIndex = 1
 
         If datosProducto.IsNull("TasaAnual") OrElse datosProducto.IsNull("TipoTasa") Then
             condicionesProducto.Text = "Este producto todavía no tiene una tasa vigente configurada."
@@ -63,9 +79,9 @@ Public Class Simulador
         Else
             Dim tipoTasa = If(CStr(datosProducto("TipoTasa")) = "EFECTIVA_ANUAL", "efectiva anual", "nominal anual")
             condicionesProducto.Text = String.Format(CultureInfo.GetCultureInfo("es-PA"),
-                "Tasa vigente: {0:0.######}% {1} · Monto permitido: B/. {2:N2}–B/. {3:N2} · Plazo: {4}–{5} cuotas",
-                CDec(datosProducto("TasaAnual")), tipoTasa, minimo, maximo, CInt(datosProducto("PlazoMinimo")), CInt(datosProducto("PlazoMaximo")))
-            simular.Enabled = metodo.Items.Count > 1 AndAlso periodo.Items.Count > 1
+                "Tasa vigente: {0:0.######}% {1} · Monto permitido: B/. {2:N2}–B/. {3:N2} · Plazo: {4}–{5} meses · Una cuota mensual",
+                CDec(datosProducto("TasaAnual")), tipoTasa, minimo, maximo, plazoMinimo, plazoMaximo)
+            simular.Enabled = metodo.Items.Count > 1 AndAlso periodosPermitidos.Rows.Count > 0
         End If
         resultados.Visible = False
         Session.Remove("SimuladorPlan")
@@ -81,7 +97,7 @@ Public Class Simulador
             .MetodoId = metodoId,
             .PeriodicidadId = Seleccion(periodo),
             .Monto = DecimalSimulador(monto, "Monto"),
-            .CantidadCuotas = CuotasSimulador(cuotas),
+            .CantidadCuotas = Seleccion(cuotas),
             .FechaPrimerPago = Fecha(primerPago)
         }
     End Function
@@ -98,22 +114,28 @@ Public Class Simulador
         Return valor
     End Function
 
-    Private Shared Function CuotasSimulador(campo As TextBox) As Integer
-        Dim valor = DecimalSimulador(campo, "Cantidad de cuotas")
-        If valor <> Decimal.Truncate(valor) OrElse valor > Integer.MaxValue Then
-            Throw New ArgumentException("Cantidad de cuotas: escriba un número entero; las cuotas no admiten fracciones.")
-        End If
-        Return Decimal.ToInt32(valor)
-    End Function
+    Private Sub ReiniciarPlazo()
+        cuotas.Items.Clear()
+        cuotas.Items.Add(New ListItem("Seleccione primero un producto", ""))
+        cuotas.Enabled = False
+    End Sub
+
+    Private Sub CargarMensual()
+        Dim mensual = ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id)
+        periodo.Items.Clear()
+        If mensual.Rows.Count = 0 Then Throw New InvalidOperationException("No está configurada la periodicidad mensual.")
+        periodo.Items.Add(New ListItem("Mensual", Convert.ToString(mensual.Rows(0)("Id"), CultureInfo.InvariantCulture)))
+        periodo.SelectedIndex = 0
+        periodo.Enabled = False
+    End Sub
 
     Protected Sub LimpiarSimulacion(sender As Object, e As EventArgs) Handles limpiarSimulador.Click
         producto.SelectedIndex = 0
         metodo.Items.Clear()
         metodo.Items.Add(New ListItem("Seleccione producto", ""))
-        periodo.Items.Clear()
-        periodo.Items.Add(New ListItem("Seleccione producto", ""))
+        CargarMensual()
         monto.Text = String.Empty
-        cuotas.Text = String.Empty
+        ReiniciarPlazo()
         primerPago.Text = String.Empty
         comparar.Checked = False
         condicionesProducto.Text = "Selecciona un producto activo para consultar sus condiciones."
@@ -142,7 +164,7 @@ Public Class Simulador
         totalPagar.Text = FormatoDinero(plan.Sum(Function(q) q.Cuota))
         cuotaMaxima.Text = FormatoDinero(plan.Max(Function(q) q.Cuota))
         Dim datosProducto = Fila(ServicioFinanzas.Consultar("PRODUCTO_SIMULADOR", Actor.Id, solicitud.ProductoId))
-        Dim comision = If(datosProducto.IsNull("ValorComision"), 0D, MotorPrestamos.Dinero(CDec(datosProducto("ValorComision"))))
+        Dim comision = If(datosProducto.IsNull("ValorComision"), 0D, SistemaFinanciera.DAL.FinanzasRepositorio.CalcularComision(CStr(datosProducto("TipoComision")), CDec(datosProducto("ValorComision")), solicitud.Monto))
         Dim gastos = If(datosProducto.IsNull("ValorGastos"), 0D, MotorPrestamos.Dinero(CDec(datosProducto("ValorGastos"))))
         If comision + gastos > solicitud.Monto Then Throw New ArgumentException("La comisión y los gastos del producto superan el monto a simular.")
         comisionEstimado.Text = FormatoDinero(comision)
