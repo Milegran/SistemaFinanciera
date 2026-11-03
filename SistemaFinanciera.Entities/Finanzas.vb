@@ -3,6 +3,8 @@ Public Class UsuarioFinanzas
     Public Property Id As Integer
     Public Property Nombre As String
     Public Property Roles As String()
+    Public Property DebeCambiarClave As Boolean
+    Public Property MinutosInactividad As Integer = 20
     Public Function Puede(ParamArray permitidos As String()) As Boolean
         Return Roles IsNot Nothing AndAlso Roles.Any(Function(r) permitidos.Contains(r))
     End Function

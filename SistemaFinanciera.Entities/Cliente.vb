@@ -40,5 +40,7 @@ Public Interface IClienteRepositorio
     Function Listar(busqueda As String, activo As Nullable(Of Boolean)) As List(Of Cliente)
     Function Obtener(id As Integer) As Cliente
     Function Guardar(cliente As Cliente) As Integer
+    Function EstadosCivilesActivos() As List(Of KeyValuePair(Of String, String))
+    Function EstadoCivilActivo(codigo As String) As Boolean
     Sub CambiarEstado(id As Integer, activo As Boolean, version As Byte())
 End Interface

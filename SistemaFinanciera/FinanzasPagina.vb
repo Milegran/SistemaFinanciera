@@ -2,6 +2,7 @@ Option Strict On
 Imports System.Data
 Imports System.Globalization
 Imports System.Web.UI.HtmlControls
+Imports System.Web.Security
 Imports SistemaFinanciera.BL
 Imports SistemaFinanciera.DAL
 Imports SistemaFinanciera.Entities
@@ -27,6 +28,15 @@ Public Class FinanzasPagina
             If Not Integer.TryParse(User.Identity.Name, id) Then Throw New UnauthorizedAccessException()
             Actor = ServicioFinanzas.Usuario(id)
             Context.Items("CapitalWest.UsuarioFinanzas") = Actor
+            Session.Timeout=Actor.MinutosInactividad
+            Dim ahoraUtc=DateTime.UtcNow
+            Dim ticket As New FormsAuthenticationTicket(2,id.ToString(Globalization.CultureInfo.InvariantCulture),ahoraUtc,ahoraUtc.AddMinutes(Actor.MinutosInactividad),False,"",FormsAuthentication.FormsCookiePath)
+            Dim cookie As New HttpCookie(FormsAuthentication.FormsCookieName,FormsAuthentication.Encrypt(ticket)) With {.HttpOnly=True,.Secure=Request.IsSecureConnection,.Path=ticket.CookiePath}
+            Response.Cookies.Set(cookie)
+            If Actor.DebeCambiarClave AndAlso Not Request.AppRelativeCurrentExecutionFilePath.EndsWith("/Administracion/CambiarClave.aspx", StringComparison.OrdinalIgnoreCase) Then
+                Response.Redirect("~/Administracion/CambiarClave.aspx", True)
+                Return
+            End If
         Catch ex As Exception When TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is ArgumentException
             System.Web.Security.FormsAuthentication.SignOut()
             Response.Redirect("~/Acceso.aspx?expirada=1", True)

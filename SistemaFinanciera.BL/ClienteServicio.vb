@@ -27,9 +27,17 @@ Public Class ClienteServicio
     Public Function Obtener(id As Integer) As Cliente
         Return repositorio.Obtener(id)
     End Function
+    Public Function EstadosCivilesActivos() As List(Of KeyValuePair(Of String, String))
+        Return repositorio.EstadosCivilesActivos()
+    End Function
     Public Function Guardar(cliente As Cliente) As Integer
         Dim errores = Validar(cliente)
         If errores.Count > 0 Then Throw New ArgumentException(String.Join(Environment.NewLine, errores))
+        If cliente.TipoPersona = "NATURAL" AndAlso Not repositorio.EstadoCivilActivo(cliente.EstadoCivil) Then
+            Dim estadoAnterior As Cliente = Nothing
+            If cliente.Id > 0 Then estadoAnterior = repositorio.Obtener(cliente.Id)
+            If estadoAnterior Is Nothing OrElse estadoAnterior.EstadoCivil <> cliente.EstadoCivil Then Throw New ArgumentException("El estado civil seleccionado ya no está disponible. Elija una opción activa del catálogo.")
+        End If
         Return repositorio.Guardar(cliente)
     End Function
     Public Sub CambiarEstado(id As Integer, activo As Boolean, version As Byte())

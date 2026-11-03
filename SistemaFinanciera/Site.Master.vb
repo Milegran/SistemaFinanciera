@@ -20,6 +20,10 @@ Public Class SiteMaster
             End If
         End If
 
+        Dim puedeAdministrar=usuario IsNot Nothing AndAlso usuario.Puede("ADMINISTRADOR")
+        pnlAdminSidebar.Visible=puedeAdministrar
+        lnkAdministracion.Visible=puedeAdministrar
+        lnkAjustes.Visible=puedeAdministrar
         If usuario Is Nothing Then
             litUsuarioNombre.Text = "Usuario"
             litUsuarioRol.Text = "Sin sesión"

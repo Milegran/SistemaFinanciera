@@ -123,10 +123,7 @@
 </div>
 <div class="finance-field">
 <label for="<%= tipoTasaForm.ClientID %>">Tipo de tasa</label>
-<asp:DropDownList ID="tipoTasaForm" runat="server" CssClass="form-select" required="required">
-<asp:ListItem Text="Nominal anual" Value="NOMINAL_ANUAL" />
-<asp:ListItem Text="Efectiva anual" Value="EFECTIVA_ANUAL" />
-</asp:DropDownList>
+<asp:DropDownList ID="tipoTasaForm" runat="server" CssClass="form-select" required="required" />
 </div>
 <div class="finance-field">
 <label for="<%= fechaDesdeTasa.ClientID %>">Fecha de inicio de vigencia</label>

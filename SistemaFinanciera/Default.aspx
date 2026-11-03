@@ -1,12 +1,15 @@
 <%@ Page Title="Inicio" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="false" CodeBehind="Default.aspx.vb" Inherits="SistemaFinanciera._Default" %>
 <asp:Content ID="DashboardHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <style>
+        .home-dashboard .home-kpi-heading > span { font-weight: 700 !important; }
+    </style>
     <script src="<%= ResolveUrl("~/Scripts/Dashboard.js?v=1") %>" defer="defer"></script>
 </asp:Content>
 <asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
 <div class="home-dashboard">
     <section class="home-greeting" aria-label="Resumen del día">
         <div class="home-greeting-copy">
-            <h1>Bienvenida, <asp:Literal ID="litNombreUsuario" runat="server" Mode="Encode" /><span class="home-wave" aria-hidden="true">👋</span></h1>
+            <h1>Te damos la bienvenida, <asp:Literal ID="litNombreUsuario" runat="server" Mode="Encode" /><span class="home-wave" aria-hidden="true">👋</span></h1>
             <p>Resumen de cartera, cobros y vencimientos.</p>
             <label class="home-search" for="dashboardQuickSearch">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11"  cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>

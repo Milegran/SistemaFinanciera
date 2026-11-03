@@ -2,6 +2,9 @@
 Partial Public Class Reportes
     Protected WithEvents pnlMensaje As Global.System.Web.UI.HtmlControls.HtmlGenericControl
     Protected WithEvents mensaje As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents tituloGrafica As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents subtituloGrafica As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents graficaReporte As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents reporte As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents desde As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents hasta As Global.System.Web.UI.WebControls.TextBox

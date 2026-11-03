@@ -18,8 +18,8 @@ Public Class Productos
             Lista(capitalizacion, ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id))
             If capitalizacion.Items.Count > 1 Then capitalizacion.Items.RemoveAt(0)
             capitalizacion.Enabled = False
-            tipoTasa.Items.Add(New ListItem("Nominal anual", "NOMINAL_ANUAL"))
-            tipoTasa.Items.Add(New ListItem("Efectiva anual", "EFECTIVA_ANUAL"))
+            Lista(tipoTasa, ServicioFinanzas.Consultar("TIPOS_TASA_ACTIVOS", Actor.Id), "Codigo")
+            Lista(tipoTasaForm, ServicioFinanzas.Consultar("TIPOS_TASA_ACTIVOS", Actor.Id), "Codigo")
             Dim productosTodos = ServicioFinanzas.Consultar("PRODUCTOS", Actor.Id)
             Lista(ddlProductoTasa, productosTodos)
             ddlProductoTasa.Items(0).Text = "Todos los productos"
@@ -107,7 +107,9 @@ Public Class Productos
         mesesMin.Text = Math.Max(CInt(filaProducto("PlazoMinimo")), CInt(Math.Ceiling(CDec(filaProducto("PlazoMinimoMeses"))))).ToString()
         mesesMax.Text = Math.Min(CInt(filaProducto("PlazoMaximo")), CInt(Math.Floor(CDec(filaProducto("PlazoMaximoMeses"))))).ToString()
         tasa.Text = Convert.ToDecimal(filaProducto("TasaAnual")).ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)
-        tipoTasa.SelectedValue = CStr(filaProducto("TipoTasa")) : capitalizacion.SelectedIndex = 0
+        Dim tasaActual = CStr(filaProducto("TipoTasa"))
+        tipoTasa.SelectedValue = If(tipoTasa.Items.FindByValue(tasaActual) Is Nothing, "", tasaActual)
+        capitalizacion.SelectedIndex = 0
         tipoComision.SelectedValue = CStr(filaProducto("TipoComision"))
         comision.Text = Dinero(filaProducto("ValorComision")) : gastos.Text = Dinero(filaProducto("ValorGastos")) : activo.Checked = CBool(filaProducto("Activo"))
         Dim permitidos = ServicioFinanzas.Consultar("PRODUCTO_METODOS", Actor.Id, id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()

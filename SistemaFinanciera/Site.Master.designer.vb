@@ -12,6 +12,9 @@ Option Explicit On
 
 
 Partial Public Class SiteMaster
+    Protected WithEvents lnkAdministracion As Global.System.Web.UI.HtmlControls.HtmlAnchor
+    Protected WithEvents lnkAjustes As Global.System.Web.UI.HtmlControls.HtmlAnchor
+    Protected WithEvents pnlAdminSidebar As Global.System.Web.UI.WebControls.Panel
 
     Protected WithEvents litUsuarioIniciales As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litUsuarioNombre As Global.System.Web.UI.WebControls.Literal

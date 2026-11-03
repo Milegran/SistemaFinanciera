@@ -127,6 +127,11 @@
     <Content Include="About.aspx" />
     <Content Include="Acceso.aspx" />
     <Content Include="Administracion\Auditoria.aspx" />
+    <Content Include="Administracion\CambiarClave.aspx" />
+    <Content Include="Administracion\Parametros.aspx" />
+    <Content Include="Administracion\MetodosCalculo.aspx" />
+    <Content Include="Administracion\Roles.aspx" />
+    <Content Include="Administracion\Catalogos.aspx" />
     <Content Include="Administracion\Usuarios.aspx" />
     <Content Include="Clientes\Clientes.aspx" />
     <Content Include="Contact.aspx" />
@@ -227,6 +232,41 @@
     <Content Include="Bundle.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Administracion\Roles.aspx.designer.vb">
+      <DependentUpon>Roles.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Administracion\Roles.aspx.vb">
+      <DependentUpon>Roles.aspx</DependentUpon>
+      <SubType>ASPXCodebehind</SubType>
+    </Compile>
+    <Compile Include="Administracion\Catalogos.aspx.designer.vb">
+      <DependentUpon>Catalogos.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Administracion\Catalogos.aspx.vb">
+      <DependentUpon>Catalogos.aspx</DependentUpon>
+      <SubType>ASPXCodebehind</SubType>
+    </Compile>
+    <Compile Include="Administracion\MetodosCalculo.aspx.designer.vb">
+      <DependentUpon>MetodosCalculo.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Administracion\MetodosCalculo.aspx.vb">
+      <DependentUpon>MetodosCalculo.aspx</DependentUpon>
+      <SubType>ASPXCodebehind</SubType>
+    </Compile>
+    <Compile Include="Administracion\CambiarClave.aspx.designer.vb">
+      <DependentUpon>CambiarClave.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Administracion\CambiarClave.aspx.vb">
+      <DependentUpon>CambiarClave.aspx</DependentUpon>
+      <SubType>ASPXCodebehind</SubType>
+    </Compile>
+    <Compile Include="Administracion\Parametros.aspx.designer.vb">
+      <DependentUpon>Parametros.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Administracion\Parametros.aspx.vb">
+      <DependentUpon>Parametros.aspx</DependentUpon>
+      <SubType>ASPXCodebehind</SubType>
+    </Compile>
     <Compile Include="Administracion\Auditoria.aspx.designer.vb">
       <DependentUpon>Auditoria.aspx</DependentUpon>
     </Compile>

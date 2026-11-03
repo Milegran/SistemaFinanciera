@@ -34,6 +34,25 @@ Public Class ClienteRepositorio
         End Using
         Throw New InvalidOperationException("El cliente ya no está disponible. Actualice el listado.")
     End Function
+    Public Function EstadosCivilesActivos() As List(Of KeyValuePair(Of String, String)) Implements IClienteRepositorio.EstadosCivilesActivos
+        Dim opciones As New List(Of KeyValuePair(Of String, String))
+        Using cn As New MySqlConnection(conexion), cmd As New MySqlCommand("SELECT Codigo,Nombre FROM EstadosCiviles WHERE Activo=1 ORDER BY Nombre", cn)
+            Abrir(cn)
+            Using lector = cmd.ExecuteReader()
+                While lector.Read()
+                    opciones.Add(New KeyValuePair(Of String, String)(CStr(lector("Codigo")), CStr(lector("Nombre"))))
+                End While
+            End Using
+        End Using
+        Return opciones
+    End Function
+    Public Function EstadoCivilActivo(codigo As String) As Boolean Implements IClienteRepositorio.EstadoCivilActivo
+        Using cn As New MySqlConnection(conexion), cmd As New MySqlCommand("SELECT 1 FROM EstadosCiviles WHERE Codigo=@Codigo AND Activo=1 LIMIT 1", cn)
+            cmd.Parameters.Add("@Codigo", MySqlDbType.VarChar, 30).Value = If(codigo, "")
+            Abrir(cn)
+            Return cmd.ExecuteScalar() IsNot Nothing
+        End Using
+    End Function
     Public Function Guardar(c As Cliente) As Integer Implements IClienteRepositorio.Guardar
         ResolverUbicacion(c)
         Dim sql = If(c.Id = 0, "INSERT INTO Clientes (TipoPersona, TipoIdentificacion, Identificacion, Nombres, Apellidos, FechaNacimiento, Sexo, EstadoCivil, Telefono, Correo, Direccion, CodigoProvincia, CodigoDistrito, CodigoCorregimiento, Provincia, Distrito, Corregimiento, Ocupacion, Ingresos, Referencias) VALUES (@TipoPersona, @TipoIdentificacion, @Identificacion, @Nombres, @Apellidos, @FechaNacimiento, @Sexo, @EstadoCivil, @Telefono, @Correo, @Direccion, @CodigoProvincia, @CodigoDistrito, @CodigoCorregimiento, @Provincia, @Distrito, @Corregimiento, @Ocupacion, @Ingresos, @Referencias)", "UPDATE Clientes SET TipoPersona=@TipoPersona, TipoIdentificacion=@TipoIdentificacion, Identificacion=@Identificacion, Nombres=@Nombres, Apellidos=@Apellidos, FechaNacimiento=@FechaNacimiento, Sexo=@Sexo, EstadoCivil=@EstadoCivil, Telefono=@Telefono, Correo=@Correo, Direccion=@Direccion, CodigoProvincia=@CodigoProvincia, CodigoDistrito=@CodigoDistrito, CodigoCorregimiento=@CodigoCorregimiento, Provincia=@Provincia, Distrito=@Distrito, Corregimiento=@Corregimiento, Ocupacion=@Ocupacion, Ingresos=@Ingresos, Referencias=@Referencias, Version=Version+1, ModificadoUtc=UTC_TIMESTAMP() WHERE Id=@Id AND Version=@Version")

@@ -1,4 +1,4 @@
-﻿Option Strict On
+Option Strict On
 Imports System.Data
 Imports System.Security.Cryptography
 Imports System.Text.RegularExpressions
@@ -54,6 +54,129 @@ Public Class FinanzasServicio
     Public Function HayUsuarios() As Boolean
         Return repo.HayUsuarios()
     End Function
+    Public Function RolesAdministracion(usuarioId As Integer) As DataTable
+        Return repo.RolesAdministracion(usuarioId)
+    End Function
+    Public Function CatalogoAdministracion(usuarioId As Integer,codigo As String) As DataTable
+        Return repo.CatalogoAdministracion(usuarioId,codigo)
+    End Function
+    Public Sub GuardarEstadosCatalogoAdministracion(usuarioId As Integer,codigo As String,estados As IDictionary(Of String,Boolean))
+        If estados Is Nothing OrElse estados.Count=0 Then Throw New ArgumentException("Seleccione un catálogo editable.")
+        repo.GuardarEstadosCatalogoAdministracion(usuarioId,If(codigo,""),estados)
+    End Sub
+    Public Function MetodosAdministracion(usuarioId As Integer) As DataTable
+        Return repo.MetodosAdministracion(usuarioId)
+    End Function
+    Public Sub GuardarMetodoAdministracion(usuarioId As Integer,id As Integer,nombre As String,descripcion As String,formula As String,variables As String,algoritmo As String,ejemplo As String)
+        If id<=0 Then Throw New ArgumentException("Seleccione un método de cálculo.")
+        Texto(nombre,"Nombre del método",100)
+        Texto(descripcion,"Descripción",500)
+        Texto(formula,"Fórmula",8000,False)
+        Texto(variables,"Variables",8000,False)
+        Texto(algoritmo,"Algoritmo",8000,False)
+        Texto(ejemplo,"Ejemplo manual",8000,False)
+        repo.GuardarMetodoAdministracion(usuarioId,id,nombre.Trim(),descripcion.Trim(),If(formula,"").Trim(),If(variables,"").Trim(),If(algoritmo,"").Trim(),If(ejemplo,"").Trim())
+    End Sub
+    Public Sub CambiarEstadoMetodoAdministracion(usuarioId As Integer,id As Integer,activo As Boolean)
+        repo.CambiarEstadoMetodoAdministracion(usuarioId,id,activo)
+    End Sub
+    Public Function ParametrosAdministracion(usuarioId As Integer) As DataTable
+        Return repo.ParametrosAdministracion(usuarioId)
+    End Function
+    Public Sub GuardarParametrosAdministracion(usuarioId As Integer,valores As IDictionary(Of String,String))
+        If valores Is Nothing OrElse valores.Count<>9 Then Throw New ArgumentException("No se recibió el conjunto completo de parámetros.")
+        ValidarEnteroParametro(valores,"INTENTOS_MAXIMOS",1,20)
+        ValidarEnteroParametro(valores,"BLOQUEO_MINUTOS",1,999)
+        ValidarEnteroParametro(valores,"INACTIVIDAD_MINUTOS",1,999)
+        ValidarEnteroParametro(valores,"CLAVE_LONGITUD_MINIMA",8,64)
+        ValidarEnteroParametro(valores,"DIAS_GRACIA_MORA",0,365)
+        ValidarDecimalParametro(valores,"PORCENTAJE_MAXIMO_CUOTA_INGRESOS",0.01D,100D)
+        ValidarDecimalParametro(valores,"TASA_MORA_ANUAL",0D,100D)
+        For Each codigo In {"CLAVE_MAYUSCULA","CLAVE_NUMERO"}
+            If Not valores.ContainsKey(codigo) OrElse Not {"0","1"}.Contains(valores(codigo)) Then Throw New ArgumentException("Revise las reglas de contraseña.")
+        Next
+        repo.GuardarParametrosAdministracion(usuarioId,valores)
+    End Sub
+    Private Shared Sub ValidarEnteroParametro(valores As IDictionary(Of String,String),codigo As String,minimo As Integer,maximo As Integer)
+        Dim numero As Integer
+        If Not valores.ContainsKey(codigo) OrElse Regex.Replace(valores(codigo),"\D","").Length>3 OrElse Not Integer.TryParse(valores(codigo),Globalization.NumberStyles.None,Globalization.CultureInfo.InvariantCulture,numero) OrElse numero<minimo OrElse numero>maximo Then Throw New ArgumentException(codigo & ": indique hasta 3 dígitos y un valor entre " & minimo.ToString() & " y " & maximo.ToString() & ".")
+    End Sub
+    Private Shared Sub ValidarDecimalParametro(valores As IDictionary(Of String,String),codigo As String,minimo As Decimal,maximo As Decimal)
+        Dim numero As Decimal
+        If Not valores.ContainsKey(codigo) OrElse Regex.Replace(valores(codigo),"\D","").Length>3 OrElse Not Decimal.TryParse(valores(codigo),Globalization.NumberStyles.AllowDecimalPoint,Globalization.CultureInfo.InvariantCulture,numero) OrElse numero<minimo OrElse numero>maximo OrElse Decimal.Round(numero,4)<>numero Then Throw New ArgumentException(codigo & ": indique hasta 3 dígitos numéricos, entre " & minimo.ToString(Globalization.CultureInfo.InvariantCulture) & " y " & maximo.ToString(Globalization.CultureInfo.InvariantCulture) & ".")
+    End Sub
+    Public Function ResumenUsuariosAdministracion(usuarioId As Integer) As DataTable
+        Return repo.ResumenUsuariosAdministracion(usuarioId)
+    End Function
+    Public Function ConsultarUsuariosAdministracion(usuarioId As Integer,busqueda As String,rolId As Integer,estado As String) As DataTable
+        If rolId<0 OrElse Not {"TODOS","ACTIVO","INACTIVO"}.Contains(If(estado,"TODOS")) Then Throw New ArgumentException("Revise los filtros seleccionados.")
+        Return repo.ConsultarUsuariosAdministracion(usuarioId,If(busqueda,""),rolId,If(estado,"TODOS"))
+    End Function
+    Public Sub GuardarUsuarioAdministracion(usuarioId As Integer,id As Integer,nombreUsuario As String,nombreCompleto As String,correo As String,rolId As Integer,activo As Boolean,clave As String)
+        If id<0 Then Throw New ArgumentException("Usuario no válido.")
+        If Not Regex.IsMatch(If(nombreUsuario,""),PatronUsuarioNuevo) Then Throw New ArgumentException("Usuario: use 3–20 caracteres, comience con letra y utilice letras, números, punto, guion o guion bajo.")
+        Texto(nombreCompleto,"Nombre completo",160)
+        If Not Regex.IsMatch(If(nombreCompleto,"" ).Trim().Normalize(),ClienteServicio.PatronNombre) OrElse Regex.Split(If(nombreCompleto,"" ).Trim(),"\s+").Length<2 Then Throw New ArgumentException("Escriba el nombre completo y al menos un apellido.")
+        Try
+            Dim mail As New System.Net.Mail.MailAddress(If(correo,""))
+            If correo.Length>254 OrElse mail.Address<>correo OrElse Not mail.Host.Contains(".") Then Throw New ArgumentException("Correo inválido.")
+        Catch ex As Exception When TypeOf ex Is FormatException OrElse TypeOf ex Is ArgumentException
+            Throw New ArgumentException("Correo inválido.")
+        End Try
+        If id=0 AndAlso String.IsNullOrEmpty(clave) Then Throw New ArgumentException("La contraseña inicial es obligatoria.")
+        Dim hash=""
+        If Not String.IsNullOrEmpty(clave) Then
+            ValidarClave(clave)
+            hash=HashClave(clave)
+        End If
+        repo.GuardarUsuarioAdministracion(usuarioId,id,nombreUsuario.Trim(),nombreCompleto.Trim(),correo.Trim(),rolId,activo,hash)
+    End Sub
+    Public Sub CambiarEstadoUsuarioAdministracion(usuarioId As Integer,id As Integer,activo As Boolean)
+        repo.CambiarEstadoUsuarioAdministracion(usuarioId,id,activo)
+    End Sub
+    Public Function RestablecerClaveUsuarioAdministracion(usuarioId As Integer,id As Integer) As String
+        If id<=0 Then Throw New ArgumentException("Seleccione un usuario.")
+        Dim bytes(47) As Byte
+        Using rng=RandomNumberGenerator.Create()
+            rng.GetBytes(bytes)
+        End Using
+        Dim temporal="Cw!7" & Convert.ToBase64String(bytes).Replace("+","A").Replace("/","b").Replace("=","9")
+        repo.RestablecerClaveUsuarioAdministracion(usuarioId,id,HashClave(temporal))
+        Return temporal
+    End Function
+    Public Sub RestablecerClaveManualUsuarioAdministracion(usuarioId As Integer,id As Integer,clave As String)
+        If id<=0 Then Throw New ArgumentException("Seleccione un usuario.")
+        ValidarClave(clave)
+        repo.RestablecerClaveManualUsuarioAdministracion(usuarioId,id,HashClave(clave))
+    End Sub
+    Public Sub CambiarClavePropia(usuarioId As Integer,clave As String)
+        ValidarClave(clave)
+        repo.CambiarClavePropia(usuarioId,HashClave(clave))
+    End Sub
+    Public Function ConsultarAuditoria(usuarioId As Integer,usuarioFiltro As Integer,modulo As String,accion As String,desde As Nullable(Of Date),hasta As Nullable(Of Date)) As DataTable
+        If usuarioFiltro<0 OrElse (desde.HasValue AndAlso hasta.HasValue AndAlso desde.Value.Date>hasta.Value.Date) Then Throw New ArgumentException("Revise los filtros y el rango de fechas.")
+        Return repo.ConsultarAuditoria(usuarioId,usuarioFiltro,If(modulo,""),If(accion,""),desde,hasta)
+    End Function
+    Public Function DetalleAuditoria(usuarioId As Integer,id As Long) As DataTable
+        If id<=0 Then Throw New ArgumentException("Seleccione un registro de auditoría.")
+        Return repo.DetalleAuditoria(usuarioId,id)
+    End Function
+    Private Sub ValidarClave(clave As String,Optional maximo As Integer=128)
+        Dim minimo=8,requiereMayuscula=True,requiereNumero=True
+        Try
+            For Each fila As DataRow In repo.PoliticaClave().Rows
+                Select Case CStr(fila("Codigo"))
+                    Case "CLAVE_LONGITUD_MINIMA" : Integer.TryParse(CStr(fila("Valor")),minimo)
+                    Case "CLAVE_MAYUSCULA" : requiereMayuscula=CStr(fila("Valor"))="1"
+                    Case "CLAVE_NUMERO" : requiereNumero=CStr(fila("Valor"))="1"
+                End Select
+            Next
+        Catch ex As Exception
+            Diagnostics.Trace.TraceWarning("No se pudo leer la política de contraseña; se aplican las reglas seguras predeterminadas: {0}",ex.Message)
+        End Try
+        If minimo<8 OrElse minimo>64 Then minimo=8
+        If String.IsNullOrEmpty(clave) OrElse clave.Length<minimo OrElse clave.Length>maximo OrElse (requiereMayuscula AndAlso Not Regex.IsMatch(clave,"[A-Z]")) OrElse (requiereNumero AndAlso Not Regex.IsMatch(clave,"[0-9]")) Then Throw New ArgumentException("La contraseña debe tener " & minimo.ToString() & "–" & maximo.ToString() & " caracteres" & If(requiereMayuscula," e incluir mayúscula","") & If(requiereNumero," y número","") & ".")
+    End Sub
     Public Shared Function HashClave(clave As String) As String
         Dim sal(15) As Byte
         Using rng = RandomNumberGenerator.Create()
@@ -93,7 +216,7 @@ Public Class FinanzasServicio
             Throw New ArgumentException("Correo inválido.")
         End Try
         If correo.Length > 254 OrElse mail.Address <> correo OrElse Not mail.Host.Contains(".") Then Throw New ArgumentException("Correo inválido.")
-        If String.IsNullOrEmpty(clave) OrElse clave.Length < 8 OrElse clave.Length > 20 Then Throw New ArgumentException("La contraseña debe tener entre 8 y 20 caracteres.")
+        ValidarClave(clave,20)
         Return repo.CrearAdministrador(nombre, completo, correo, HashClave(clave))
     End Function
     Public Function IniciarSesion(nombre As String, clave As String) As Integer

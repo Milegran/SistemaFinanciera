@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function numericSyntax(el, value) {
         const decimals = el.step === '1' ? 0 : (el.step.split('.')[1] || '').length;
         const digits = (el.max || '999999999999.99').split('.')[0].length;
-        return new RegExp('^\\d{0,' + digits + '}' + (decimals ? '(?:\\.\\d{0,' + decimals + '})?' : '') + '$').test(value);
+        const formato = new RegExp('^\\d{0,' + digits + '}' + (decimals ? '(?:\\.\\d{0,' + decimals + '})?' : '') + '$').test(value);
+        return formato && (!el.dataset.digitos || value.replace(/\D/g, '').length <= Number(el.dataset.digitos));
     }
     const controls = scope => Array.from(scope.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=checkbox]),textarea,select')).filter(el => !el.disabled && !el.readOnly);
     function message(el, text) {
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (key === 'referencia') required = field(scope, 'forma').value !== 'EFECTIVO';
         if (el.validity.badInput) return 'Introduzca un número válido.';
         if (!value) return required ? 'Este campo es obligatorio.' : '';
+        if (numeric(el) && el.dataset.digitos && raw.replace(/\D/g, '').length > Number(el.dataset.digitos)) return 'Use máximo ' + el.dataset.digitos + ' dígitos numéricos.';
         if (el.type !== 'password' && forbidden.test(value)) return 'No se admiten estos símbolos o caracteres invisibles.';
         if (el.maxLength > 0 && raw.length > el.maxLength) return 'Máximo ' + el.maxLength + ' caracteres.';
         if (el.minLength > 0 && raw.length < el.minLength) return 'Mínimo ' + el.minLength + ' caracteres.';
@@ -93,6 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.autocomplete = 'off';
             }
             let lastAccepted = el.value;
+            // El navegador repone el caret después de focus y anulaba select() al hacer clic.
+            // Selecciona el valor cuando termina el clic para que se pueda reemplazar de inmediato.
+            if (el.dataset.digitos) {
+                const seleccionarValor = () => window.setTimeout(() => el.select(), 0);
+                el.addEventListener('mouseup', seleccionarValor);
+                el.addEventListener('pointerup', seleccionarValor);
+            }
             if (el.required) {
                 const label = document.querySelector('label[for="' + el.id + '"]');
                 if (label) label.classList.add('finance-required');
@@ -106,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (el.dataset.regla === 'codigo' && proposed && !/^[A-Za-z][A-Za-z0-9_-]*$/.test(proposed)) return el.dataset.ayuda;
                 if (el.dataset.regla === 'usuario-nuevo' && proposed && !/^[A-Za-z][A-Za-z0-9._-]*$/.test(proposed)) return el.dataset.ayuda;
                 if (el.dataset.regla === 'nombre-producto' && proposed && !/^[\p{L}][\p{L}\p{M}0-9 '\u2019.,&()/+%\-]*$/u.test(proposed)) return el.dataset.ayuda;
+                if (numeric(el) && el.dataset.digitos && proposed.replace(/\D/g, '').length > Number(el.dataset.digitos)) return 'Use máximo ' + el.dataset.digitos + ' dígitos numéricos.';
                 if (numeric(el) && !numericSyntax(el, proposed)) return el.step === '1' ? 'Use solo enteros dentro de la longitud permitida.' : 'Use solo números y un punto, con hasta ' + (el.step.split('.')[1] || '').length + ' decimales.';
                 if (numeric(el) && proposed && el.max && Number(proposed) > Number(el.max)) return 'El máximo permitido es ' + el.max + '.';
                 return '';

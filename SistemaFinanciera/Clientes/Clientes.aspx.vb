@@ -33,11 +33,26 @@ Public Class Clientes
             ViewState("ClienteId") = value
         End Set
     End Property
+    Protected Sub Page_Init(sender As Object, e As EventArgs) Handles Me.Init
+        ddlEstadoCivil.Items.Clear()
+        ddlEstadoCivil.Items.Add(New ListItem("Seleccione...", ""))
+        For Each opcion In Servicio.EstadosCivilesActivos()
+            ddlEstadoCivil.Items.Add(New ListItem(opcion.Value, opcion.Key))
+        Next
+        ddlEstadoCivil.Items.Add(New ListItem("No aplica", "NO_APLICA"))
+    End Sub
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         txtFechaNacimiento.Attributes("min") = ClienteServicio.HoyPanama.AddYears(-120).ToString("yyyy-MM-dd")
         txtFechaNacimiento.Attributes("max") = ClienteServicio.HoyPanama.ToString("yyyy-MM-dd")
         pnlMensaje.Visible = False
         pnlErrorFormulario.Visible = False
+        If IsPostBack AndAlso pnlFormularioCliente.Visible AndAlso ClienteId > 0 Then
+            Dim clienteActual = Servicio.Obtener(ClienteId)
+            If clienteActual.TipoPersona = "NATURAL" AndAlso Not String.IsNullOrWhiteSpace(clienteActual.EstadoCivil) AndAlso ddlEstadoCivil.Items.FindByValue(clienteActual.EstadoCivil) Is Nothing Then
+                ddlEstadoCivil.Items.Insert(1, New ListItem(TextoLegible(clienteActual.EstadoCivil) & " (inactivo · registro actual)", clienteActual.EstadoCivil))
+                If String.IsNullOrEmpty(ddlEstadoCivil.SelectedValue) Then ddlEstadoCivil.SelectedValue = clienteActual.EstadoCivil
+            End If
+        End If
         If Not IsPostBack Then
             litKpiActivos.Text = "—"
             litKpiInactivos.Text = "—"
@@ -131,6 +146,9 @@ Public Class Clientes
         txtNombres.Text = If(c.Nombres, "")
         txtApellidos.Text = If(c.Apellidos, "")
         ddlSexo.SelectedValue = If(c.Sexo, "")
+        If c.Id > 0 AndAlso c.TipoPersona = "NATURAL" AndAlso Not String.IsNullOrWhiteSpace(c.EstadoCivil) AndAlso ddlEstadoCivil.Items.FindByValue(c.EstadoCivil) Is Nothing Then
+            ddlEstadoCivil.Items.Insert(1, New ListItem(TextoLegible(c.EstadoCivil) & " (inactivo · registro actual)", c.EstadoCivil))
+        End If
         ddlEstadoCivil.SelectedValue = If(c.EstadoCivil, "")
         txtTelefono.Text = If(c.Telefono, "")
         txtCorreo.Text = If(c.Correo, "")

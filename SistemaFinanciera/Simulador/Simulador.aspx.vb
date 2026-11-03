@@ -14,7 +14,7 @@ Public Class Simulador
             Ejecutar(Sub()
                 ReiniciarPlazo()
                 CargarMensual()
-                Lista(producto, ServicioFinanzas.Consultar("PRODUCTOS_ACTIVOS", Actor.Id))
+                Lista(producto, ServicioFinanzas.Consultar("PRODUCTOS_OPERABLES", Actor.Id))
                 If producto.Items.Count > 1 Then
                     producto.SelectedIndex = 1
                     CargarOpcionesProducto()

@@ -57,9 +57,9 @@ Public Class FinanzasRepositorio
         End Using
     End Function
     Private Shared Function Usuario(cn As MySqlConnection, tx As MySqlTransaction, id As Integer) As UsuarioFinanzas
-        Dim t = Tabla(cn, tx, "SELECT u.Id,u.NombreCompleto,r.Codigo FROM Usuarios u JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id JOIN Roles r ON r.Id=ur.RolId WHERE u.Id=@p0 AND u.Activo=1 AND r.Activo=1", id)
+        Dim t = Tabla(cn, tx, "SELECT u.Id,u.NombreCompleto,u.DebeCambiarClave,COALESCE((SELECT CAST(Valor AS UNSIGNED) FROM ParametrosSistema WHERE Codigo='INACTIVIDAD_MINUTOS'),20) AS MinutosInactividad,r.Codigo FROM Usuarios u JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id JOIN Roles r ON r.Id=ur.RolId WHERE u.Id=@p0 AND u.Activo=1 AND r.Activo=1", id)
         If t.Rows.Count = 0 Then Throw New UnauthorizedAccessException("Inicie sesión con un usuario activo y un rol asignado.")
-        Return New UsuarioFinanzas With {.Id = id, .Nombre = CStr(t.Rows(0)("NombreCompleto")), .Roles = t.AsEnumerable().Select(Function(r) CStr(r("Codigo"))).ToArray()}
+        Return New UsuarioFinanzas With {.Id = id, .Nombre = CStr(t.Rows(0)("NombreCompleto")), .Roles = t.AsEnumerable().Select(Function(r) CStr(r("Codigo"))).ToArray(), .DebeCambiarClave = CBool(t.Rows(0)("DebeCambiarClave")), .MinutosInactividad = Math.Max(1,CInt(t.Rows(0)("MinutosInactividad")))}
     End Function
     Private Shared Sub Autorizar(cn As MySqlConnection, tx As MySqlTransaction, id As Integer, ParamArray roles As String())
         If Not Usuario(cn, tx, id).Puede(roles) Then Throw New UnauthorizedAccessException("Su rol no permite realizar esta operación.")
@@ -69,8 +69,238 @@ Public Class FinanzasRepositorio
             Return Usuario(cn, Nothing, id)
         End Using
     End Function
+
+    Public Function RolesAdministracion(usuarioId As Integer) As DataTable
+        Using cn = Abrir()
+            Autorizar(cn, Nothing, usuarioId, "ADMINISTRADOR")
+            Return Tabla(cn, Nothing, "SELECT Id,Codigo,Nombre,EsSistema,Activo FROM Roles WHERE Activo=1 ORDER BY EsSistema DESC,Nombre")
+        End Using
+    End Function
+
+    Public Function CatalogoAdministracion(usuarioId As Integer,codigo As String) As DataTable
+        Using cn=Abrir()
+            Autorizar(cn,Nothing,usuarioId,"ADMINISTRADOR")
+            Select Case If(codigo,"").ToUpperInvariant()
+                Case "ESTADOS" : Return Tabla(cn,Nothing,"SELECT Codigo,Nombre,Activo,EsSistema FROM Estados ORDER BY Nombre")
+                Case "ESTADOS_CIVILES" : Return Tabla(cn,Nothing,"SELECT Codigo,Nombre,Activo FROM EstadosCiviles ORDER BY Nombre")
+                Case "TIPOS_TASA" : Return Tabla(cn,Nothing,"SELECT Codigo,Nombre,Activo FROM TiposTasa ORDER BY Nombre")
+                Case "FORMAS_PAGO" : Return Tabla(cn,Nothing,"SELECT Codigo,Nombre,Activo FROM FormasPago ORDER BY Nombre")
+                Case "PERIODICIDADES" : Return Tabla(cn,Nothing,"SELECT Codigo,Nombre,Unidad,Intervalo,PeriodosPorAnio,Activo FROM Periodicidades ORDER BY Nombre")
+                Case "PROVINCIAS" : Return Tabla(cn,Nothing,"SELECT codigo_provincia AS Codigo,nombre_provincia AS Nombre FROM provincia ORDER BY codigo_provincia")
+                Case "DISTRITOS" : Return Tabla(cn,Nothing,"SELECT codigo_distrito AS Codigo,nombre_distrito AS Nombre,codigo_provincia AS Provincia FROM distrito ORDER BY codigo_provincia,codigo_distrito")
+                Case "CORREGIMIENTOS" : Return Tabla(cn,Nothing,"SELECT codigo_corregimiento AS Codigo,nombre_corregimiento AS Nombre,codigo_distrito AS Distrito FROM corregimiento ORDER BY codigo_distrito,codigo_corregimiento")
+                Case Else : Throw New ArgumentException("Seleccione un catálogo disponible.")
+            End Select
+        End Using
+    End Function
+
+    Public Sub GuardarEstadosCatalogoAdministracion(usuarioId As Integer,codigo As String,estados As IDictionary(Of String,Boolean))
+        If estados Is Nothing OrElse estados.Count=0 Then Throw New ArgumentException("No se recibieron estados para guardar.")
+        Dim nombreTabla As String
+        Select Case If(codigo,"").ToUpperInvariant()
+            Case "ESTADOS" : nombreTabla="Estados"
+            Case "ESTADOS_CIVILES" : nombreTabla="EstadosCiviles"
+            Case "TIPOS_TASA" : nombreTabla="TiposTasa"
+            Case "FORMAS_PAGO" : nombreTabla="FormasPago"
+            Case "PERIODICIDADES" : nombreTabla="Periodicidades"
+            Case Else : Throw New ArgumentException("Este catálogo no permite editar estados.")
+        End Select
+        Transaccion(Function(cn,tx)
+            Autorizar(cn,tx,usuarioId,"ADMINISTRADOR")
+            Dim actuales=Tabla(cn,tx,"SELECT Codigo,Activo,Nombre FROM " & nombreTabla & " ORDER BY Codigo FOR UPDATE")
+            If actuales.Rows.Count<>estados.Count Then Throw New ArgumentException("El catálogo cambió. Actualice la pantalla e intente de nuevo.")
+            If estados.Values.All(Function(estado) Not estado) Then Throw New ArgumentException("Debe quedar al menos un valor activo en el catálogo.")
+            Dim encontrados As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim cambios As New List(Of String)()
+            For Each fila As DataRow In actuales.Rows
+                Dim clave=CStr(fila("Codigo")), nuevo As Boolean
+                If Not estados.TryGetValue(clave,nuevo) Then Throw New ArgumentException("El catálogo cambió. Actualice la pantalla e intente de nuevo.")
+                encontrados.Add(clave)
+                If CBool(fila("Activo"))<>nuevo Then
+                    Escribir(cn,tx,"UPDATE " & nombreTabla & " SET Activo=@p0 WHERE Codigo=@p1",nuevo,clave)
+                    cambios.Add(clave & "=" & If(nuevo,"Activo","Inactivo"))
+                End If
+            Next
+            If encontrados.Count<>estados.Count Then Throw New ArgumentException("El catálogo cambió. Actualice la pantalla e intente de nuevo.")
+            If cambios.Count>0 Then Auditar(cn,tx,usuarioId,"CATALOGO_ESTADOS_ACTUALIZADOS",nombreTabla,0,String.Join("; ",cambios))
+            Return 0
+        End Function)
+    End Sub
+
+    Public Function MetodosAdministracion(usuarioId As Integer) As DataTable
+        Using cn=Abrir()
+            Autorizar(cn,Nothing,usuarioId,"ADMINISTRADOR")
+            Return Tabla(cn,Nothing,"SELECT Id,Codigo,Nombre,Descripcion,ClaseImplementacion,Formula,Variables,Algoritmo,EjemploManual,Activo,(SELECT COUNT(*) FROM Prestamos p WHERE p.MetodoId=MetodosCalculo.Id) AS PrestamosAsociados FROM MetodosCalculo ORDER BY Id")
+        End Using
+    End Function
+
+    Public Sub GuardarMetodoAdministracion(usuarioId As Integer,id As Integer,nombre As String,descripcion As String,formula As String,variables As String,algoritmo As String,ejemplo As String)
+        If id<=0 Then Throw New ArgumentException("Seleccione un método de cálculo.")
+        Transaccion(Function(cn,tx)
+                        Autorizar(cn,tx,usuarioId,"ADMINISTRADOR")
+                        Dim actual=Tabla(cn,tx,"SELECT Codigo,Nombre FROM MetodosCalculo WHERE Id=@p0 FOR UPDATE",id)
+                        If actual.Rows.Count<>1 Then Throw New ArgumentException("El método ya no está disponible.")
+                        Escribir(cn,tx,"UPDATE MetodosCalculo SET Nombre=@p0,Descripcion=@p1,Formula=@p2,Variables=@p3,Algoritmo=@p4,EjemploManual=@p5 WHERE Id=@p6",nombre,descripcion,formula,variables,algoritmo,ejemplo,id)
+                        Auditar(cn,tx,usuarioId,"METODO_ACTUALIZADO","MetodosCalculo",id,"Documentación del método " & CStr(actual.Rows(0)("Codigo")) & " actualizada")
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Sub CambiarEstadoMetodoAdministracion(usuarioId As Integer,id As Integer,activo As Boolean)
+        If id<=0 Then Throw New ArgumentException("Seleccione un método de cálculo.")
+        Transaccion(Function(cn,tx)
+                        Autorizar(cn,tx,usuarioId,"ADMINISTRADOR")
+                        Dim t=Tabla(cn,tx,"SELECT Activo,Nombre FROM MetodosCalculo WHERE Id=@p0 FOR UPDATE",id)
+                        If t.Rows.Count<>1 Then Throw New ArgumentException("El método ya no está disponible.")
+                        If Not activo AndAlso CBool(t.Rows(0)("Activo")) AndAlso CInt(Tabla(cn,tx,"SELECT COUNT(*) Total FROM MetodosCalculo WHERE Activo=1 AND Id<>@p0",id).Rows(0)("Total"))=0 Then Throw New InvalidOperationException("Debe quedar al menos un método de cálculo activo.")
+                        Escribir(cn,tx,"UPDATE MetodosCalculo SET Activo=@p0 WHERE Id=@p1",activo,id)
+                        Auditar(cn,tx,usuarioId,If(activo,"METODO_ACTIVADO","METODO_DESACTIVADO"),"MetodosCalculo",id,"Método " & CStr(t.Rows(0)("Nombre")) & If(activo," activado"," desactivado"))
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Function ParametrosAdministracion(usuarioId As Integer) As DataTable
+        Using cn=Abrir()
+            Autorizar(cn,Nothing,usuarioId,"ADMINISTRADOR")
+            Return Tabla(cn,Nothing,"SELECT Codigo,Valor,TipoDato,Descripcion,EsPropuesta,DATE_FORMAT(CONVERT_TZ(ModificadoUtc,'+00:00','-05:00'),'%d/%m/%Y %H:%i') AS Modificado FROM ParametrosSistema ORDER BY Codigo")
+        End Using
+    End Function
+
+    Public Sub GuardarParametrosAdministracion(usuarioId As Integer,valores As IDictionary(Of String,String))
+        Transaccion(Function(cn,tx)
+                        Autorizar(cn,tx,usuarioId,"ADMINISTRADOR")
+                        For Each par In valores
+                            Dim actual=Tabla(cn,tx,"SELECT Valor FROM ParametrosSistema WHERE Codigo=@p0 FOR UPDATE",par.Key)
+                            If actual.Rows.Count<>1 Then Throw New ArgumentException("El parámetro " & par.Key & " no existe en la base de datos.")
+                            Dim anterior=CStr(actual.Rows(0)("Valor"))
+                            If anterior<>par.Value Then
+                                Escribir(cn,tx,"UPDATE ParametrosSistema SET Valor=@p0,ModificadoPor=@p1 WHERE Codigo=@p2",par.Value,usuarioId,par.Key)
+                                Escribir(cn,tx,"INSERT INTO Auditoria(UsuarioId,RolCodigo,Modulo,Accion,Entidad,RegistroId,Detalle,Descripcion,ValorAnterior,ValorNuevo) SELECT @p0,(SELECT r.Codigo FROM UsuarioRoles ur JOIN Roles r ON r.Id=ur.RolId WHERE ur.UsuarioId=@p0 ORDER BY r.Id LIMIT 1),'SEGURIDAD','PARAMETRO_ACTUALIZADO','ParametrosSistema',0,@p1,@p2,@p3,@p4",usuarioId,"Cambio de parámetro del sistema",par.Key & " actualizado",anterior,par.Value)
+                            End If
+                        Next
+                        Return 0
+                    End Function)
+    End Sub
+
+    Private Function ParametroEntero(codigo As String,valorPredeterminado As Integer) As Integer
+        Using cn=Abrir()
+            Dim t=Tabla(cn,Nothing,"SELECT Valor FROM ParametrosSistema WHERE Codigo=@p0",codigo)
+            Dim valor As Integer
+            If t.Rows.Count=0 OrElse Not Integer.TryParse(Convert.ToString(t.Rows(0)("Valor")),Globalization.NumberStyles.Integer,Globalization.CultureInfo.InvariantCulture,valor) Then Return valorPredeterminado
+            Return valor
+        End Using
+    End Function
+
+    Public Function PoliticaClave() As DataTable
+        Using cn=Abrir()
+            Return Tabla(cn,Nothing,"SELECT Codigo,Valor FROM ParametrosSistema WHERE Codigo IN ('CLAVE_LONGITUD_MINIMA','CLAVE_MAYUSCULA','CLAVE_NUMERO')")
+        End Using
+    End Function
+
+    Public Function ConsultarUsuariosAdministracion(usuarioId As Integer, busqueda As String, rolId As Integer, estado As String) As DataTable
+        Using cn = Abrir()
+            Autorizar(cn, Nothing, usuarioId, "ADMINISTRADOR")
+            Return Tabla(cn, Nothing, "SELECT u.Id,u.NombreUsuario,u.NombreCompleto,u.Correo,u.Activo,u.UltimoAccesoUtc,DATE_FORMAT(CONVERT_TZ(u.UltimoAccesoUtc,'+00:00','-05:00'),'%d/%m/%Y %H:%i') AS UltimoAcceso,COALESCE(GROUP_CONCAT(DISTINCT r.Nombre ORDER BY r.Nombre SEPARATOR ', '),'Sin rol') AS Rol,COALESCE(GROUP_CONCAT(DISTINCT r.Id ORDER BY r.Id),'') AS RolIds FROM Usuarios u LEFT JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id LEFT JOIN Roles r ON r.Id=ur.RolId WHERE (@p0='' OR u.NombreCompleto LIKE CONCAT('%',@p0,'%') OR u.NombreUsuario LIKE CONCAT('%',@p0,'%') OR u.Correo LIKE CONCAT('%',@p0,'%')) AND (@p1=0 OR EXISTS(SELECT 1 FROM UsuarioRoles urf WHERE urf.UsuarioId=u.Id AND urf.RolId=@p1)) AND (@p2='TODOS' OR (@p2='ACTIVO' AND u.Activo=1) OR (@p2='INACTIVO' AND u.Activo=0)) GROUP BY u.Id,u.NombreUsuario,u.NombreCompleto,u.Correo,u.Activo,u.UltimoAccesoUtc ORDER BY u.Activo DESC,u.NombreCompleto,u.Id", If(busqueda, "").Trim(), rolId, estado)
+        End Using
+    End Function
+
+    Public Function ResumenUsuariosAdministracion(usuarioId As Integer) As DataTable
+        Using cn = Abrir()
+            Autorizar(cn, Nothing, usuarioId, "ADMINISTRADOR")
+            Return Tabla(cn, Nothing, "SELECT COUNT(*) AS Total,COALESCE(SUM(Activo=1),0) AS Activos,COALESCE(SUM(Activo=0),0) AS Inactivos,(SELECT COUNT(*) FROM Roles WHERE Activo=1) AS Roles FROM Usuarios")
+        End Using
+    End Function
+
+    Public Sub GuardarUsuarioAdministracion(usuarioId As Integer, id As Integer, nombreUsuario As String, nombreCompleto As String, correo As String, rolId As Integer, activo As Boolean, hash As String)
+        Transaccion(Function(cn, tx)
+                        Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
+                        If rolId <= 0 OrElse Tabla(cn, tx, "SELECT Id FROM Roles WHERE Id=@p0 AND Activo=1", rolId).Rows.Count <> 1 Then Throw New ArgumentException("Seleccione un rol activo.")
+                        If id = usuarioId AndAlso Not activo Then Throw New InvalidOperationException("No puedes desactivar tu propia cuenta.")
+                        If id = 0 Then
+                            Dim nuevoId = Insertar(cn, tx, "INSERT INTO Usuarios(NombreUsuario,NombreCompleto,Correo,ContrasenaHash,Activo,DebeCambiarClave) VALUES(@p0,@p1,@p2,@p3,@p4,1)", nombreUsuario, nombreCompleto, correo, hash, activo)
+                            Escribir(cn, tx, "INSERT INTO UsuarioRoles(UsuarioId,RolId) VALUES(@p0,@p1)", nuevoId, rolId)
+                            Auditar(cn, tx, usuarioId, "USUARIO_CREADO", "Usuarios", nuevoId, "Alta de " & nombreUsuario & " con rol " & rolId.ToString())
+                            Return 0
+                        End If
+                        Dim actual = Tabla(cn, tx, "SELECT u.Activo,EXISTS(SELECT 1 FROM UsuarioRoles ur JOIN Roles r ON r.Id=ur.RolId WHERE ur.UsuarioId=u.Id AND r.Codigo='ADMINISTRADOR') AS EsAdmin FROM Usuarios u WHERE u.Id=@p0 FOR UPDATE", id)
+                        If actual.Rows.Count <> 1 Then Throw New ArgumentException("El usuario ya no está disponible.")
+                        Dim eraAdmin = CBool(actual.Rows(0)("EsAdmin")), estabaActivo = CBool(actual.Rows(0)("Activo"))
+                        Dim seraAdmin = CStr(Tabla(cn, tx, "SELECT Codigo FROM Roles WHERE Id=@p0", rolId).Rows(0)("Codigo")) = "ADMINISTRADOR"
+                        If estabaActivo AndAlso eraAdmin AndAlso (Not activo OrElse Not seraAdmin) Then
+                            Dim restantes = CInt(Tabla(cn, tx, "SELECT COUNT(*) Total FROM Usuarios u JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id JOIN Roles r ON r.Id=ur.RolId WHERE u.Activo=1 AND r.Activo=1 AND r.Codigo='ADMINISTRADOR' AND u.Id<>@p0", id).Rows(0)("Total"))
+                            If restantes = 0 Then Throw New InvalidOperationException("Debe permanecer al menos un administrador activo.")
+                        End If
+                        Escribir(cn, tx, "UPDATE Usuarios SET NombreCompleto=@p0,Correo=@p1,Activo=@p2 WHERE Id=@p3", nombreCompleto, correo, activo, id)
+                        Escribir(cn, tx, "DELETE FROM UsuarioRoles WHERE UsuarioId=@p0", id)
+                        Escribir(cn, tx, "INSERT INTO UsuarioRoles(UsuarioId,RolId) VALUES(@p0,@p1)", id, rolId)
+                        If Not String.IsNullOrEmpty(hash) Then Escribir(cn, tx, "UPDATE Usuarios SET ContrasenaHash=@p0,DebeCambiarClave=1,VersionSesion=VersionSesion+1 WHERE Id=@p1", hash, id)
+                        Auditar(cn, tx, usuarioId, "USUARIO_ACTUALIZADO", "Usuarios", id, "Perfil, rol y estado actualizados para " & nombreUsuario)
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Sub CambiarEstadoUsuarioAdministracion(usuarioId As Integer, id As Integer, activo As Boolean)
+        If id <= 0 Then Throw New ArgumentException("Seleccione un usuario.")
+        Transaccion(Function(cn, tx)
+                        Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
+                        If id = usuarioId AndAlso Not activo Then Throw New InvalidOperationException("No puedes desactivar tu propia cuenta.")
+                        Dim t = Tabla(cn, tx, "SELECT u.Activo,EXISTS(SELECT 1 FROM UsuarioRoles ur JOIN Roles r ON r.Id=ur.RolId WHERE ur.UsuarioId=u.Id AND r.Codigo='ADMINISTRADOR') EsAdmin FROM Usuarios u WHERE u.Id=@p0 FOR UPDATE", id)
+                        If t.Rows.Count <> 1 Then Throw New ArgumentException("El usuario ya no está disponible.")
+                        If Not activo AndAlso CBool(t.Rows(0)("Activo")) AndAlso CBool(t.Rows(0)("EsAdmin")) Then
+                            Dim restantes=CInt(Tabla(cn,tx,"SELECT COUNT(*) Total FROM Usuarios u JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id JOIN Roles r ON r.Id=ur.RolId WHERE u.Activo=1 AND r.Activo=1 AND r.Codigo='ADMINISTRADOR' AND u.Id<>@p0",id).Rows(0)("Total"))
+                            If restantes=0 Then Throw New InvalidOperationException("Debe permanecer al menos un administrador activo.")
+                        End If
+                        Escribir(cn,tx,"UPDATE Usuarios SET Activo=@p0,VersionSesion=VersionSesion+1 WHERE Id=@p1",activo,id)
+                        Auditar(cn,tx,usuarioId,If(activo,"USUARIO_ACTIVADO","USUARIO_DESACTIVADO"),"Usuarios",id,"Cambio de acceso de cuenta")
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Sub RestablecerClaveUsuarioAdministracion(usuarioId As Integer, id As Integer, hash As String)
+        Transaccion(Function(cn,tx)
+                        Autorizar(cn,tx,usuarioId,"ADMINISTRADOR")
+                        If Tabla(cn,tx,"SELECT Id FROM Usuarios WHERE Id=@p0 AND Activo=1 FOR UPDATE",id).Rows.Count<>1 Then Throw New ArgumentException("El usuario activo ya no está disponible.")
+                        Escribir(cn,tx,"UPDATE Usuarios SET ContrasenaHash=@p0,DebeCambiarClave=1,VersionSesion=VersionSesion+1,IntentosFallidos=0,BloqueadoHastaUtc=NULL WHERE Id=@p1",hash,id)
+                        Auditar(cn,tx,usuarioId,"CLAVE_RESTAURADA","Usuarios",id,"Restablecimiento de clave temporal; requiere cambio al ingresar")
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Sub RestablecerClaveManualUsuarioAdministracion(usuarioId As Integer,id As Integer,hash As String)
+        Transaccion(Function(cn,tx)
+                        Autorizar(cn,tx,usuarioId,"ADMINISTRADOR")
+                        If Tabla(cn,tx,"SELECT Id FROM Usuarios WHERE Id=@p0 AND Activo=1 FOR UPDATE",id).Rows.Count<>1 Then Throw New ArgumentException("El usuario activo ya no está disponible.")
+                        Escribir(cn,tx,"UPDATE Usuarios SET ContrasenaHash=@p0,DebeCambiarClave=1,VersionSesion=VersionSesion+1,IntentosFallidos=0,BloqueadoHastaUtc=NULL WHERE Id=@p1",hash,id)
+                        Auditar(cn,tx,usuarioId,"CLAVE_RESTAURADA","Usuarios",id,"Asignación manual de clave; requiere cambio al ingresar")
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Sub CambiarClavePropia(usuarioId As Integer, hash As String)
+        Transaccion(Function(cn,tx)
+                        Dim t=Tabla(cn,tx,"SELECT Id FROM Usuarios WHERE Id=@p0 AND Activo=1 FOR UPDATE",usuarioId)
+                        If t.Rows.Count<>1 Then Throw New UnauthorizedAccessException("La cuenta ya no está activa.")
+                        Escribir(cn,tx,"UPDATE Usuarios SET ContrasenaHash=@p0,DebeCambiarClave=0,VersionSesion=VersionSesion+1,IntentosFallidos=0,BloqueadoHastaUtc=NULL WHERE Id=@p1",hash,usuarioId)
+                        Auditar(cn,tx,usuarioId,"CLAVE_CAMBIADA","Usuarios",usuarioId,"Cambio de contraseña propia")
+                        Return 0
+                    End Function)
+    End Sub
+
+    Public Function ConsultarAuditoria(usuarioId As Integer, usuarioFiltro As Integer, modulo As String, accion As String, desde As Nullable(Of Date), hasta As Nullable(Of Date)) As DataTable
+        Using cn=Abrir()
+            Autorizar(cn,Nothing,usuarioId,"ADMINISTRADOR")
+            Return Tabla(cn,Nothing,"SELECT a.Id,a.FechaUtc,DATE_FORMAT(CONVERT_TZ(a.FechaUtc,'+00:00','-05:00'),'%d/%m/%Y %H:%i:%s') AS Fecha,u.NombreCompleto AS Usuario,COALESCE(a.RolCodigo,'—') AS Rol,a.Modulo,a.Accion,a.Entidad,a.RegistroId,COALESCE(a.Descripcion,a.Detalle,'') AS Descripcion,COALESCE(a.ValorAnterior,'') AS ValorAnterior,COALESCE(a.ValorNuevo,'') AS ValorNuevo,a.DireccionIp FROM Auditoria a LEFT JOIN Usuarios u ON u.Id=a.UsuarioId WHERE (@p0=0 OR a.UsuarioId=@p0) AND (@p1='' OR a.Modulo=@p1) AND (@p2='' OR a.Accion=@p2) AND (@p3 IS NULL OR a.FechaUtc>=@p3) AND (@p4 IS NULL OR a.FechaUtc<@p4) ORDER BY a.FechaUtc DESC,a.Id DESC LIMIT 2000",usuarioFiltro,If(modulo,""),If(accion,""),If(desde.HasValue,CType(desde.Value.Date,Object),DBNull.Value),If(hasta.HasValue,CType(hasta.Value.Date.AddDays(1),Object),DBNull.Value))
+        End Using
+    End Function
+
+    Public Function DetalleAuditoria(usuarioId As Integer,id As Long) As DataTable
+        Using cn=Abrir()
+            Autorizar(cn,Nothing,usuarioId,"ADMINISTRADOR")
+            Return Tabla(cn,Nothing,"SELECT a.Id,DATE_FORMAT(CONVERT_TZ(a.FechaUtc,'+00:00','-05:00'),'%d/%m/%Y %H:%i:%s') AS Fecha,u.NombreCompleto AS Usuario,COALESCE(a.RolCodigo,'—') AS Rol,a.Modulo,a.Accion,a.Entidad,a.RegistroId,COALESCE(a.Descripcion,a.Detalle,'') AS Descripcion,COALESCE(a.ValorAnterior,'') AS ValorAnterior,COALESCE(a.ValorNuevo,'') AS ValorNuevo,a.DireccionIp FROM Auditoria a LEFT JOIN Usuarios u ON u.Id=a.UsuarioId WHERE a.Id=@p0 LIMIT 1",id)
+        End Using
+    End Function
     Private Shared Sub Auditar(cn As MySqlConnection, tx As MySqlTransaction, usuarioId As Integer, accion As String, entidad As String, id As Integer, detalle As String)
-        Escribir(cn, tx, "INSERT INTO Auditoria(UsuarioId,Modulo,Accion,Entidad,RegistroId,Detalle) VALUES(@p0,'FINANZAS',@p1,@p2,@p3,@p4)", usuarioId, accion, entidad, id, detalle)
+        Escribir(cn,tx,"INSERT INTO Auditoria(UsuarioId,RolCodigo,Modulo,Accion,Entidad,RegistroId,Detalle,Descripcion) SELECT @p0,(SELECT r.Codigo FROM UsuarioRoles ur JOIN Roles r ON r.Id=ur.RolId WHERE ur.UsuarioId=@p0 ORDER BY r.Id LIMIT 1),CASE WHEN @p2='Usuarios' THEN 'SEGURIDAD' WHEN @p2='Productos' OR @p2='Tasas' THEN 'PRODUCTOS' WHEN @p2='Clientes' THEN 'CLIENTES' WHEN @p2='Solicitudes' THEN 'SOLICITUDES' WHEN @p2='Prestamos' THEN 'PRÉSTAMOS' WHEN @p2='Pagos' THEN 'PAGOS' WHEN @p2='MetodosCalculo' THEN 'METODOS' ELSE 'FINANZAS' END,@p1,@p2,@p3,@p4,@p4",usuarioId,accion,entidad,id,detalle)
     End Sub
     Public Function HayUsuarios() As Boolean
         Using cn = Abrir()
@@ -84,11 +314,17 @@ Public Class FinanzasRepositorio
         End Using
     End Function
     Public Sub ResultadoLogin(id As Integer, correcto As Boolean)
+        Dim maxIntentos=ParametroEntero("INTENTOS_MAXIMOS",5)
+        Dim minutosBloqueo=ParametroEntero("BLOQUEO_MINUTOS",15)
         Using cn = Abrir(), tx = cn.BeginTransaction()
             Dim actualizar = If(correcto,
                 "UPDATE Usuarios SET IntentosFallidos=0,BloqueadoHastaUtc=NULL,UltimoAccesoUtc=UTC_TIMESTAMP() WHERE Id=@p0",
-                "UPDATE Usuarios SET IntentosFallidos=IF(BloqueadoHastaUtc IS NOT NULL AND BloqueadoHastaUtc<=UTC_TIMESTAMP(),1,IntentosFallidos+1),BloqueadoHastaUtc=IF(BloqueadoHastaUtc IS NOT NULL AND BloqueadoHastaUtc<=UTC_TIMESTAMP(),NULL,IF(IntentosFallidos>=5,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 15 MINUTE),BloqueadoHastaUtc)) WHERE Id=@p0")
-            Escribir(cn, tx, actualizar, id)
+                "UPDATE Usuarios SET IntentosFallidos=IF(BloqueadoHastaUtc IS NOT NULL AND BloqueadoHastaUtc<=UTC_TIMESTAMP(),1,IntentosFallidos+1),BloqueadoHastaUtc=IF(BloqueadoHastaUtc IS NOT NULL AND BloqueadoHastaUtc<=UTC_TIMESTAMP(),NULL,IF(IntentosFallidos>=@p1,DATE_ADD(UTC_TIMESTAMP(),INTERVAL @p2 MINUTE),BloqueadoHastaUtc)) WHERE Id=@p0")
+            If correcto Then
+                Escribir(cn,tx,actualizar,id)
+            Else
+                Escribir(cn,tx,actualizar,id,maxIntentos,minutosBloqueo)
+            End If
             Dim estado = Tabla(cn, tx, "SELECT IntentosFallidos,BloqueadoHastaUtc FROM Usuarios WHERE Id=@p0", id)
             Dim bloqueado = estado.Rows.Count = 1 AndAlso Not IsDBNull(estado.Rows(0)("BloqueadoHastaUtc")) AndAlso CDate(estado.Rows(0)("BloqueadoHastaUtc")) > Date.UtcNow
             Dim accion = If(correcto, "INICIO_SESION", If(bloqueado, "BLOQUEO_TEMPORAL", "INTENTO_FALLIDO"))
@@ -134,12 +370,14 @@ Public Class FinanzasRepositorio
                 Case "TASAS"
                     Return Tabla(cn, Nothing, "SELECT t.Id,t.ProductoId,p.Nombre Producto,t.Porcentaje,t.TipoTasa,t.VigenteDesde,t.VigenteHasta,t.Activo,t.EsPredeterminada,t.CapitalizacionId FROM Tasas t INNER JOIN ProductosFinancieros p ON p.Id=t.ProductoId WHERE NOT EXISTS (SELECT 1 FROM Tasas td WHERE td.ProductoId=t.ProductoId AND td.Porcentaje=t.Porcentaje AND td.TipoTasa=t.TipoTasa AND td.CapitalizacionId=t.CapitalizacionId AND td.VigenteDesde=t.VigenteDesde AND (td.EsPredeterminada>t.EsPredeterminada OR (td.EsPredeterminada=t.EsPredeterminada AND td.Activo>t.Activo) OR (td.EsPredeterminada=t.EsPredeterminada AND td.Activo=t.Activo AND td.Id>t.Id))) ORDER BY p.Nombre,t.VigenteDesde DESC,t.Id DESC", id)
                 Case "PRODUCTO_SIMULADOR"
-                    Return Tabla(cn, Nothing, "SELECT pr.*,t.Porcentaje TasaAnual,t.TipoTasa,t.CapitalizacionId FROM ProductosFinancieros pr LEFT JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) WHERE pr.Id=@p0 AND pr.Activo=1", id)
+                    Return Tabla(cn, Nothing, "SELECT pr.*,t.Porcentaje TasaAnual,t.TipoTasa,t.CapitalizacionId FROM ProductosFinancieros pr LEFT JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 JOIN TiposTasa tt2 ON tt2.Codigo=t2.TipoTasa AND tt2.Activo=1 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) WHERE pr.Id=@p0 AND pr.Activo=1", id)
                 Case "METODOS" : Return Tabla(cn, Nothing, "SELECT Id,Nombre,Codigo FROM MetodosCalculo WHERE (@p0=0 AND Activo=1) OR Id=@p0 ORDER BY Id", id)
+                Case "TIPOS_TASA_ACTIVOS" : Return Tabla(cn, Nothing, "SELECT Codigo,Nombre FROM TiposTasa WHERE Activo=1 ORDER BY Nombre")
                 Case "PERIODICIDADES_PAGO" : Return Tabla(cn, Nothing, "SELECT p.* FROM Periodicidades p WHERE p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12 ORDER BY p.Id")
                 Case "PERIODICIDADES" : Return Tabla(cn, Nothing, "SELECT * FROM Periodicidades WHERE (@p0=0 AND Activo=1) OR Id=@p0 ORDER BY Id", id)
                 Case "CLIENTES" : Return Tabla(cn, Nothing, "SELECT Id,CONCAT(Identificacion,' · ',Nombres,' ',Apellidos) Nombre FROM Clientes WHERE Activo=1 ORDER BY Nombres")
                 Case "PRODUCTOS_ACTIVOS" : Return Tabla(cn, Nothing, "SELECT Id,Nombre FROM ProductosFinancieros WHERE Activo=1 ORDER BY Nombre")
+                Case "PRODUCTOS_OPERABLES" : Return Tabla(cn, Nothing, "SELECT pr.Id,pr.Nombre FROM ProductosFinancieros pr WHERE pr.Activo=1 AND EXISTS (SELECT 1 FROM Tasas t JOIN TiposTasa tt ON tt.Codigo=t.TipoTasa AND tt.Activo=1 WHERE t.ProductoId=pr.Id AND t.Activo=1 AND t.EsPredeterminada=1 AND t.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t.VigenteHasta IS NULL OR t.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR))) ORDER BY pr.Nombre")
                 Case "PRODUCTO_METODOS" : Return Tabla(cn, Nothing, "SELECT m.Id,m.Nombre FROM ProductoMetodos pm JOIN MetodosCalculo m ON m.Id=pm.MetodoId WHERE pm.ProductoId=@p0 AND m.Activo=1", id)
                 Case "PRODUCTO_PERIODICIDADES" : Return Tabla(cn, Nothing, "SELECT p.Id,p.Nombre FROM ProductoPeriodicidades pp JOIN Periodicidades p ON p.Id=pp.PeriodicidadId WHERE pp.ProductoId=@p0 AND p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12", id)
                 Case "SOLICITUDES"
@@ -288,6 +526,7 @@ Public Class FinanzasRepositorio
     Public Function GuardarProducto(p As ProductoFinanciero, usuarioId As Integer) As Integer
         Return Transaccion(Function(cn, tx)
                                Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
+                               If Tabla(cn, tx, "SELECT Codigo FROM TiposTasa WHERE Codigo=@p0 AND Activo=1", p.TipoTasa).Rows.Count <> 1 Then Throw New ArgumentException("El tipo de tasa ya no está disponible. Seleccione una opción activa.")
                                If p.Periodicidades.Count <> 1 Then Throw New ArgumentException("La periodicidad de pago debe ser únicamente mensual.")
                                If Tabla(cn, tx, "SELECT Id FROM Periodicidades WHERE Id=@p0 AND Activo=1 AND Unidad='MESES' AND Intervalo=1 AND PeriodosPorAnio=12", p.Periodicidades(0)).Rows.Count <> 1 Then Throw New ArgumentException("Solo se permiten pagos mensuales.")
                                If Tabla(cn, tx, "SELECT Id FROM Periodicidades WHERE Id=@p0 AND Activo=1 AND Unidad='MESES' AND Intervalo=1 AND PeriodosPorAnio=12", p.CapitalizacionId).Rows.Count <> 1 Then Throw New ArgumentException("La capitalización debe ser mensual.")
@@ -347,6 +586,7 @@ Public Class FinanzasRepositorio
     Public Function GuardarTasa(productoId As Integer, porcentaje As Decimal, tipoTasa As String, fechaDesde As Date, usuarioId As Integer) As Integer
         Return Transaccion(Function(cn, tx)
                                Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
+                               If Tabla(cn, tx, "SELECT Codigo FROM TiposTasa WHERE Codigo=@p0 AND Activo=1", tipoTasa).Rows.Count <> 1 Then Throw New ArgumentException("El tipo de tasa ya no está disponible. Seleccione una opción activa.")
                                If Tabla(cn, tx, "SELECT Id FROM ProductosFinancieros WHERE Id=@p0 FOR UPDATE", productoId).Rows.Count = 0 Then Throw New ArgumentException("Producto inexistente.")
                                Dim actual = Tabla(cn, tx, "SELECT Id,CapitalizacionId,Porcentaje,TipoTasa,VigenteDesde,VigenteHasta,Activo FROM Tasas WHERE ProductoId=@p0 AND EsPredeterminada=1 ORDER BY Id DESC FOR UPDATE", productoId)
                                If actual.Rows.Count = 0 Then Throw New ArgumentException("El producto no tiene una tasa base para heredar la capitalización. Edite el producto primero.")
@@ -366,7 +606,7 @@ Public Class FinanzasRepositorio
                            End Function)
     End Function
     Private Shared Function Contexto(cn As MySqlConnection, tx As MySqlTransaction, s As SolicitudFinanciera) As DataRow
-        Dim t = Tabla(cn, tx, "SELECT pr.*,t.Id TasaId,t.Porcentaje,t.TipoTasa,t.CapitalizacionId,cap.PeriodosPorAnio Capitalizaciones,p.PeriodosPorAnio,p.Unidad,p.Intervalo,m.Codigo Metodo,c.Ingresos FROM ProductosFinancieros pr JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) JOIN Periodicidades cap ON cap.Id=t.CapitalizacionId AND cap.Activo=1 JOIN ProductoMetodos pm ON pm.ProductoId=pr.Id JOIN MetodosCalculo m ON m.Id=pm.MetodoId AND m.Activo=1 JOIN ProductoPeriodicidades pp ON pp.ProductoId=pr.Id JOIN Periodicidades p ON p.Id=pp.PeriodicidadId AND p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12 JOIN Clientes c ON c.Id=@p3 AND c.Activo=1 WHERE pr.Id=@p0 AND pr.Activo=1 AND m.Id=@p1 AND p.Id=@p2 FOR UPDATE", s.ProductoId, s.MetodoId, s.PeriodicidadId, s.ClienteId)
+        Dim t = Tabla(cn, tx, "SELECT pr.*,t.Id TasaId,t.Porcentaje,t.TipoTasa,t.CapitalizacionId,cap.PeriodosPorAnio Capitalizaciones,p.PeriodosPorAnio,p.Unidad,p.Intervalo,m.Codigo Metodo,c.Ingresos FROM ProductosFinancieros pr JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 JOIN TiposTasa tt2 ON tt2.Codigo=t2.TipoTasa AND tt2.Activo=1 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) JOIN TiposTasa tt ON tt.Codigo=t.TipoTasa AND tt.Activo=1 JOIN Periodicidades cap ON cap.Id=t.CapitalizacionId AND cap.Activo=1 JOIN ProductoMetodos pm ON pm.ProductoId=pr.Id JOIN MetodosCalculo m ON m.Id=pm.MetodoId AND m.Activo=1 JOIN ProductoPeriodicidades pp ON pp.ProductoId=pr.Id JOIN Periodicidades p ON p.Id=pp.PeriodicidadId AND p.Activo=1 AND p.Unidad='MESES' AND p.Intervalo=1 AND p.PeriodosPorAnio=12 JOIN Clientes c ON c.Id=@p3 AND c.Activo=1 WHERE pr.Id=@p0 AND pr.Activo=1 AND m.Id=@p1 AND p.Id=@p2 FOR UPDATE", s.ProductoId, s.MetodoId, s.PeriodicidadId, s.ClienteId)
         If t.Rows.Count <> 1 Then Throw New ArgumentException("Seleccione cliente/producto activos y condiciones permitidas con tasa vigente.")
         Dim r = t.Rows(0), meses = Decimal.Round(s.CantidadCuotas * 12D / CDec(r("PeriodosPorAnio")), 2)
         If s.Monto < CDec(r("MontoMinimo")) OrElse s.Monto > CDec(r("MontoMaximo")) OrElse s.CantidadCuotas < CInt(r("PlazoMinimo")) OrElse s.CantidadCuotas > CInt(r("PlazoMaximo")) OrElse meses < CDec(r("PlazoMinimoMeses")) OrElse meses > CDec(r("PlazoMaximoMeses")) Then Throw New ArgumentException("Monto o plazo fuera de los límites del producto.")
@@ -405,7 +645,8 @@ Public Class FinanzasRepositorio
                                    "SELECT pr.MontoMinimo,pr.MontoMaximo,pr.PlazoMinimo,pr.PlazoMaximo,pr.PlazoMinimoMeses,pr.PlazoMaximoMeses," &
                                    "t.Porcentaje,t.TipoTasa,cap.PeriodosPorAnio Capitalizaciones,p.PeriodosPorAnio,p.Unidad,p.Intervalo,m.Codigo Metodo " &
                                    "FROM ProductosFinancieros pr " &
-                                   "JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) " &
+                                   "JOIN Tasas t ON t.Id=(SELECT t2.Id FROM Tasas t2 JOIN TiposTasa tt2 ON tt2.Codigo=t2.TipoTasa AND tt2.Activo=1 WHERE t2.ProductoId=pr.Id AND t2.Activo=1 AND t2.EsPredeterminada=1 AND t2.VigenteDesde<=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR) AND (t2.VigenteHasta IS NULL OR t2.VigenteHasta>=DATE(UTC_TIMESTAMP()-INTERVAL 5 HOUR)) ORDER BY t2.Id DESC LIMIT 1) " &
+                                   "JOIN TiposTasa tt ON tt.Codigo=t.TipoTasa AND tt.Activo=1 " &
                                    "JOIN Periodicidades cap ON cap.Id=t.CapitalizacionId AND cap.Activo=1 " &
                                    "JOIN ProductoMetodos pm ON pm.ProductoId=pr.Id " &
                                    "JOIN MetodosCalculo m ON m.Id=pm.MetodoId AND m.Activo=1 " &

@@ -30,7 +30,7 @@ Public Class Solicitudes
         If Not IsPostBack Then Ejecutar(Sub()
             ViewState("ClaveSolicitud") = Guid.NewGuid().ToString("N")
             Lista(cliente, ServicioFinanzas.Consultar("CLIENTES", Actor.Id))
-            Lista(producto, ServicioFinanzas.Consultar("PRODUCTOS_ACTIVOS", Actor.Id))
+            Lista(producto, ServicioFinanzas.Consultar("PRODUCTOS_OPERABLES", Actor.Id))
             CargarMensual()
             ReiniciarPlazo()
             metodo.Items.Clear()
