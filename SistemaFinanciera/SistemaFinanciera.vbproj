@@ -362,7 +362,7 @@
     </Compile>
     <Compile Include="Prestamos\DetallePrestamo.aspx.vb">
       <DependentUpon>DetallePrestamo.aspx</DependentUpon>
-      <SubType>ASPXCodebehind</SubType>
+      <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Prestamos\Prestamos.aspx.designer.vb">
       <DependentUpon>Prestamos.aspx</DependentUpon>
