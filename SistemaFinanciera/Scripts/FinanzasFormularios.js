@@ -5,10 +5,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const forbidden = /[<>\x00-\x08\x0B\x0C\x0E-\x1F\x7F\p{Cf}]/u;
     const field = (scope, name) => scope.querySelector('[id$="_' + name + '"]');
     const numeric = el => el.type === 'number' || el.dataset.numero === 'true';
+    function numericConfig(el) {
+        const max = el.dataset.limiteMaximo || el.getAttribute('max') || '999999999999.99';
+        const min = el.dataset.limiteMinimo || el.getAttribute('min') || '';
+        const step = el.dataset.pasoNumerico || el.getAttribute('step') || '1';
+        const decimals = step === '1' ? 0 : ((step.split('.')[1] || '').length);
+        const integerLimit = String(max).split('.')[0].replace(/\D/g, '').length || 12;
+        return { min: min, max: max, decimals: decimals, digits: integerLimit };
+    }
     function numericSyntax(el, value) {
-        const decimals = el.step === '1' ? 0 : (el.step.split('.')[1] || '').length;
-        const digits = (el.max || '999999999999.99').split('.')[0].length;
-        const formato = new RegExp('^\\d{0,' + digits + '}' + (decimals ? '(?:\\.\\d{0,' + decimals + '})?' : '') + '$').test(value);
+        const config = numericConfig(el);
+        const formato = new RegExp('^\\d{0,' + config.digits + '}' + (config.decimals ? '(?:\\.\\d{0,' + config.decimals + '})?' : '') + '$').test(value);
         return formato && (!el.dataset.digitos || value.replace(/\D/g, '').length <= Number(el.dataset.digitos));
     }
     const controls = scope => Array.from(scope.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=checkbox]),textarea,select')).filter(el => !el.disabled && !el.readOnly);
@@ -51,10 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el.pattern && !new RegExp('^(?:' + el.pattern + ')$', 'u').test(value)) return el.dataset.ayuda || 'Revise el formato de este campo.';
         if (el.dataset.igual && raw !== document.getElementById(el.dataset.igual).value) return 'Las contraseñas no coinciden.';
         if (numeric(el)) {
-            const decimals = el.step === '1' ? 0 : (el.step.split('.')[1] || '').length;
-            if (!new RegExp('^\\d+' + (decimals ? '(?:\\.\\d{1,' + decimals + '})?' : '') + '$').test(raw)) return decimals ? 'Use un número positivo con hasta ' + decimals + ' decimales, separados con punto.' : 'Use un número entero positivo.';
-            if (el.min && Number(raw) < Number(el.min)) return 'El mínimo permitido es ' + el.min + '.';
-            if (el.max && Number(raw) > Number(el.max)) return 'El máximo permitido es ' + el.max + '.';
+            const config = numericConfig(el);
+            if (!new RegExp('^\\d+' + (config.decimals ? '(?:\\.\\d{1,' + config.decimals + '})?' : '') + '$').test(raw)) return config.decimals ? 'Use un número positivo con hasta ' + config.decimals + ' decimales, separados con punto.' : 'Use un número entero positivo.';
+            if (config.min && Number(raw) < Number(config.min)) return 'El mínimo permitido es ' + config.min + '.';
+            if (config.max && Number(raw) > Number(config.max)) return 'El máximo permitido es ' + config.max + '.';
         }
         if (el.type === 'date') {
             if (el.validity.typeMismatch || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return 'Seleccione una fecha válida.';
@@ -87,11 +94,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // type=number no ofrece selección ni aplica maxlength. Captura decimal
             // como texto con teclado numérico; el servidor conserva su validación.
             if (el.type === 'number') {
+                // type=text deja de exponer max/step en las propiedades del input.
+                // Guárdalos antes de convertirlo para conservar los límites del producto.
+                const config = numericConfig(el);
+                el.dataset.limiteMaximo = config.max;
+                el.dataset.limiteMinimo = config.min;
+                el.dataset.pasoNumerico = el.getAttribute('step') || '1';
                 el.dataset.numero = 'true';
                 el.type = 'text';
-                el.inputMode = el.step === '1' ? 'numeric' : 'decimal';
-                const decimals = el.step === '1' ? 0 : (el.step.split('.')[1] || '').length;
-                el.maxLength = (el.max || '999999999999.99').split('.')[0].length + (decimals ? decimals + 1 : 0);
+                el.inputMode = config.decimals === 0 ? 'numeric' : 'decimal';
+                el.maxLength = config.digits + (config.decimals ? config.decimals + 1 : 0);
                 el.autocomplete = 'off';
             }
             let lastAccepted = el.value;
@@ -116,8 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (el.dataset.regla === 'usuario-nuevo' && proposed && !/^[A-Za-z][A-Za-z0-9._-]*$/.test(proposed)) return el.dataset.ayuda;
                 if (el.dataset.regla === 'nombre-producto' && proposed && !/^[\p{L}][\p{L}\p{M}0-9 '\u2019.,&()/+%\-]*$/u.test(proposed)) return el.dataset.ayuda;
                 if (numeric(el) && el.dataset.digitos && proposed.replace(/\D/g, '').length > Number(el.dataset.digitos)) return 'Use máximo ' + el.dataset.digitos + ' dígitos numéricos.';
-                if (numeric(el) && !numericSyntax(el, proposed)) return el.step === '1' ? 'Use solo enteros dentro de la longitud permitida.' : 'Use solo números y un punto, con hasta ' + (el.step.split('.')[1] || '').length + ' decimales.';
-                if (numeric(el) && proposed && el.max && Number(proposed) > Number(el.max)) return 'El máximo permitido es ' + el.max + '.';
+                const config = numeric(el) ? numericConfig(el) : null;
+                if (config && !numericSyntax(el, proposed)) return config.decimals === 0 ? 'Use solo enteros dentro de la longitud permitida.' : 'Use solo números y un punto, con hasta ' + config.decimals + ' decimales.';
+                if (config && proposed && Number(proposed) > Number(config.max)) return 'El máximo permitido es ' + config.max + '.';
                 return '';
             }
             el.addEventListener('beforeinput', event => {

@@ -2,6 +2,7 @@
 Imports System.Data
 Imports System.Globalization
 Imports System.Text
+Imports System.Web.UI.WebControls
 Public Class Reportes
     Inherits FinanzasPagina
     Private Shared ReadOnly Nombres As String() = {"Clientes registrados", "Préstamos vigentes", "Préstamos cancelados", "Préstamos en mora", "Pagos por período", "Saldos pendientes", "Estado de cuenta", "Tabla de amortización", "Resumen de cartera", "Comparativo de métodos"}
@@ -323,17 +324,32 @@ Public Class Reportes
         Mostrar(datos)
     End Sub
     Private Sub Mostrar(datos As DataTable)
+        Dim numero As Integer = Integer.Parse(Filtros(0), CultureInfo.InvariantCulture)
         tabla.Columns.Clear()
+        tabla.DataKeyNames = If(numero = 5, New String() {"PagoId"}, New String() {})
         For Each columna As DataColumn In datos.Columns
+            If numero = 5 AndAlso columna.ColumnName = "PagoId" Then Continue For
             Dim campo As New BoundField With {.DataField=columna.ColumnName,.HeaderText=columna.ColumnName,.HtmlEncode=True}
             If columna.DataType=GetType(DateTime) Then campo.DataFormatString="{0:dd/MM/yyyy}"
             If columna.DataType=GetType(Decimal) Then campo.DataFormatString=If(columna.ColumnName="Préstamos","{0:N0}","{0:N2}")
             tabla.Columns.Add(campo)
         Next
+        If numero = 5 Then
+            Dim enlaceFactura As New HyperLinkField With {
+                .HeaderText = "Factura",
+                .Text = "Ver factura",
+                .DataNavigateUrlFields = New String() {"PagoId"},
+                .DataNavigateUrlFormatString = ResolveUrl("~/Pagos/Factura.aspx?id={0}&origen=reportes"),
+                .Target = "_self",
+                .Visible = Actor.Puede("ADMINISTRADOR", "CAJERO")
+            }
+            enlaceFactura.ControlStyle.CssClass = "receipt-view-link"
+            tabla.Columns.Add(enlaceFactura)
+        End If
         tabla.PageIndex=Math.Min(tabla.PageIndex,Math.Max(0,(datos.Rows.Count-1) \ tabla.PageSize))
         Vincular(tabla,datos)
         cantidad.Text=datos.Rows.Count.ToString("N0")
-        Dim n=Integer.Parse(Filtros(0))
+        Dim n=numero
         ConfigurarGrafica(n,datos)
         Dim columnaTotal=If(n=4,"Vencido",If(n=5,"Pagado",If(n=8,"Pendiente",If(n=3 OrElse n=10,"Capital","Saldo"))))
         etiquetaTotal.Text=If(n=1,"Clientes activos",If(n=7,"Saldo al último movimiento",If(n=4,"Monto vencido",If(n=5,"Pagos aplicados",If(n=8,"Cuotas pendientes",If(n=3,"Capital original",If(n=10,"Capital comparado","Saldo de capital")))))))
@@ -389,9 +405,10 @@ Public Class Reportes
         Ejecutar(Sub()
             Dim datos=Consultar(Filtros)
             Dim contenido As New StringBuilder()
-            contenido.AppendLine(String.Join(";",datos.Columns.Cast(Of DataColumn)().Select(Function(c) CeldaCsv(c.ColumnName))))
+            Dim columnas=datos.Columns.Cast(Of DataColumn)().Where(Function(c) c.ColumnName<>"PagoId").ToList()
+            contenido.AppendLine(String.Join(";",columnas.Select(Function(c) CeldaCsv(c.ColumnName))))
             For Each fila As DataRow In datos.Rows
-                contenido.AppendLine(String.Join(";",fila.ItemArray.Select(Function(v) CeldaCsv(v))))
+                contenido.AppendLine(String.Join(";",columnas.Select(Function(c) CeldaCsv(fila(c)))))
             Next
             Response.Clear() : Response.ContentType="text/csv" : Response.ContentEncoding=Encoding.UTF8
             Response.AddHeader("Content-Disposition","attachment; filename=CapitalWest-reporte-" & Integer.Parse(Filtros(0)).ToString("00") & ".csv")
@@ -405,13 +422,15 @@ Public Class Reportes
             ConfigurarGrafica(Integer.Parse(Filtros(0)),datos)
             Dim html As New StringBuilder("<!doctype html><html lang='es'><head><meta charset='utf-8'><title>CapitalWest · Reporte</title><style>body{font:12px Arial;color:#15382c;margin:25px}h1{font-size:22px}h2{font-size:16px;margin:18px 0 8px}table{border-collapse:collapse;width:100%;font-size:10px}td,th{border-bottom:1px solid #ddd;padding:7px;text-align:left}th{background:#edf7f1}thead{display:table-header-group}tr{break-inside:avoid}.report-bars{display:table;width:100%;margin:12px 0 22px}.report-bar-row{display:table-row}.report-bar-label,.report-bar-track,.report-bar-value{display:table-cell;padding:5px 8px;vertical-align:middle}.report-bar-label{width:24%}.report-bar-track{width:60%;background:#eef3f1}.report-bar-fill{height:9px;background:#0d7a48}.report-bar-value{text-align:right;color:#087c49;font-weight:bold}.report-line-chart{width:100%;height:220px}.report-line-chart .chart-grid{stroke:#ddd;stroke-width:1}.report-line-chart .chart-area{fill:#e5f4ec}.report-line-chart .chart-line{fill:none;stroke:#0d7a48;stroke-width:3}.report-line-chart .chart-point{fill:white;stroke:#0d7a48;stroke-width:2}.report-line-chart text{font:10px Arial;fill:#667}.button{padding:10px 20px;margin-bottom:15px}@media print{.button{display:none}@page{size:landscape;margin:12mm}}</style></head><body><button class='button' onclick='window.print()'>Imprimir / Guardar PDF</button><h1>CapitalWest · ")
             html.Append(Server.HtmlEncode(Nombres(Integer.Parse(Filtros(0))-1)) & "</h1><p>" & Server.HtmlEncode(filtrosAplicados.Text) & "</p><p>" & Server.HtmlEncode(CStr(ViewState("DescripcionAplicada"))) & "</p><p>Generado: " & DateTime.UtcNow.AddHours(-5).ToString("dd/MM/yyyy HH:mm") & " · Panamá · Importes en B/. · " & datos.Rows.Count & " registros</p><h2>Resumen gráfico</h2>" & graficaReporte.Text & "<h2>Detalle del reporte</h2><table><thead><tr>")
-            For Each col As DataColumn In datos.Columns
+            Dim columnas=datos.Columns.Cast(Of DataColumn)().Where(Function(col) col.ColumnName<>"PagoId").ToList()
+            For Each col As DataColumn In columnas
                 html.Append("<th>" & Server.HtmlEncode(col.ColumnName) & "</th>")
             Next
             html.Append("</tr></thead><tbody>")
             For Each fila As DataRow In datos.Rows
                 html.Append("<tr>")
-                For Each valor In fila.ItemArray
+                For Each col As DataColumn In columnas
+                    Dim valor=fila(col)
                     html.Append("<td>" & Server.HtmlEncode(TextoCelda(valor)) & "</td>")
                 Next
                 html.Append("</tr>")

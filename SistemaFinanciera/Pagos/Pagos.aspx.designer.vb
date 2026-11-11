@@ -7,10 +7,43 @@ Partial Public Class Pagos
     Protected WithEvents prestamo As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents fechaPago As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents monto As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents montoErrorServidor As Global.System.Web.UI.WebControls.Label
     Protected WithEvents forma As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents referencia As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents montoVencidoSugerido As Global.System.Web.UI.WebControls.HiddenField
+    Protected WithEvents montoTotalSugerido As Global.System.Web.UI.WebControls.HiddenField
+    Protected WithEvents pagarVencido As Global.System.Web.UI.HtmlControls.HtmlButton
+    Protected WithEvents pagarTodo As Global.System.Web.UI.HtmlControls.HtmlButton
+    Protected WithEvents textoMontoVencido As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents textoMontoTotal As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents saldo As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents avisoPagoNoDisponible As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents razonPagoNoDisponible As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents guardar As Global.System.Web.UI.WebControls.Button
-    Protected WithEvents cuotas As Global.System.Web.UI.WebControls.GridView
+    Protected WithEvents comprobante As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents reciboNumero As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboCliente As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboPrestamo As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboFecha As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboForma As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboMonto As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboCapital As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboInteres As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboMora As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboCargos As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents reciboSaldoCapital As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents listado As Global.System.Web.UI.WebControls.GridView
+    Protected WithEvents panelCuotasCliente As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents conteoCuotasCliente As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents cuotasCliente As Global.System.Web.UI.WebControls.GridView
+    Protected WithEvents panelFiltroFacturas As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents conteoFacturas As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents buscarFactura As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents clienteFactura As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents formaFactura As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents estadoFactura As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents fechaDesdeFactura As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents fechaHastaFactura As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents filtrarFacturas As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents limpiarFacturas As Global.System.Web.UI.WebControls.Button
 End Class

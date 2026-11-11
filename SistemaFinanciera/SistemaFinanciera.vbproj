@@ -167,6 +167,7 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="Pagos\Pagos.aspx" />
+    <Content Include="Pagos\Factura.aspx" />
     <Content Include="Prestamos\DetallePrestamo.aspx" />
     <Content Include="Prestamos\Prestamos.aspx" />
     <Content Include="Productos\Productos.aspx" />
@@ -355,7 +356,14 @@
     </Compile>
     <Compile Include="Pagos\Pagos.aspx.vb">
       <DependentUpon>Pagos.aspx</DependentUpon>
-      <SubType>ASPXCodebehind</SubType>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pagos\Factura.aspx.designer.vb">
+      <DependentUpon>Factura.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pagos\Factura.aspx.vb">
+      <DependentUpon>Factura.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Prestamos\DetallePrestamo.aspx.designer.vb">
       <DependentUpon>DetallePrestamo.aspx</DependentUpon>
@@ -369,7 +377,7 @@
     </Compile>
     <Compile Include="Prestamos\Prestamos.aspx.vb">
       <DependentUpon>Prestamos.aspx</DependentUpon>
-      <SubType>ASPXCodebehind</SubType>
+      <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Productos\Productos.aspx.designer.vb">
       <DependentUpon>Productos.aspx</DependentUpon>

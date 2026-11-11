@@ -46,17 +46,34 @@
     updateBalance('capital');
 
     var search = document.getElementById('dashboardQuickSearch');
-    if (search) {
-        search.addEventListener('input', function () {
-            var value = search.value.trim().toLocaleLowerCase('es-PA');
-            document.querySelectorAll('[data-dashboard-search-row]').forEach(function (row) {
-                row.hidden = value !== '' && !row.textContent.toLocaleLowerCase('es-PA').includes(value);
-            });
+    var searchToggle = document.getElementById('dashboardSearchToggle');
+    var searchRows = document.querySelectorAll('[data-dashboard-search-row]');
+    function filterDashboardRows() {
+        var value = search ? search.value.trim().toLocaleLowerCase('es-PA') : '';
+        searchRows.forEach(function (row) {
+            row.hidden = value !== '' && !row.textContent.toLocaleLowerCase('es-PA').includes(value);
         });
-        document.addEventListener('keydown', function (event) {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-                event.preventDefault();
-                search.focus();
+    }
+    function setSearchOpen(open) {
+        if (!search || !searchToggle) return;
+        search.closest('.home-search').hidden = !open;
+        searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+            search.focus();
+        } else {
+            search.value = '';
+            filterDashboardRows();
+        }
+    }
+    if (search && searchToggle) {
+        searchToggle.addEventListener('click', function () {
+            setSearchOpen(searchToggle.getAttribute('aria-expanded') !== 'true');
+        });
+        search.addEventListener('input', filterDashboardRows);
+        search.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                setSearchOpen(false);
+                searchToggle.focus();
             }
         });
     }

@@ -386,13 +386,26 @@ Public Class FinanzasRepositorio
                     Return Tabla(cn, Nothing, "SELECT p.*,CASE WHEN p.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO') AND p.CuotasVencidas>0 THEN 'EN_MORA' ELSE p.EstadoCodigo END EstadoActual FROM v_PrestamosResumen p WHERE (@p0=0 OR p.Id=@p0) ORDER BY p.Id DESC", id)
                 Case "RESUMEN_CARTERA"
                     Return Tabla(cn, Nothing, "SELECT COALESCE(SUM(MontoAprobado),0) MontoDesembolsado,COUNT(*) PrestamosVigentes FROM Prestamos WHERE FechaDesembolso IS NOT NULL AND EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO')")
+                Case "CUOTAS_CLIENTE"
+                    Return Tabla(cn, Nothing, "SELECT q.NumeroCuota,q.FechaVencimiento,q.CapitalPendiente,q.InteresPendiente,q.MoraPendiente,q.CargosPendientes,q.TotalPendiente,q.EstadoCuota,CONCAT('PRE-',LPAD(pr.Id,GREATEST(6,CHAR_LENGTH(pr.Id)),'0')) AS NumeroPrestamo FROM v_SaldosCuota q JOIN Prestamos pr ON pr.Id=q.PrestamoId WHERE pr.ClienteId=@p0 AND pr.EstadoCodigo IN ('VIGENTE','EN_MORA','DESEMBOLSADO') AND q.TotalPendiente>0 ORDER BY q.FechaVencimiento,pr.Id,q.NumeroCuota", id)
                 Case "CUOTAS" : Return Tabla(cn, Nothing, "SELECT * FROM v_SaldosCuota WHERE PrestamoId=@p0 ORDER BY NumeroCuota", id)
-                Case "PAGOS" : Return Tabla(cn, Nothing, "SELECT p.*,CONCAT('PRE-',LPAD(pr.Id,GREATEST(6,CHAR_LENGTH(pr.Id)),'0')) AS NumeroPrestamo,CONCAT(c.Nombres,' ',c.Apellidos) Cliente,u.NombreCompleto Usuario FROM v_PagosDesglosados p JOIN Prestamos pr ON pr.Id=p.PrestamoId JOIN Clientes c ON c.Id=p.ClienteId JOIN Usuarios u ON u.Id=p.RegistradoPor WHERE (@p0=0 OR p.PrestamoId=@p0) ORDER BY p.Id DESC", id)
+                Case "PAGOS"
+                    Return AplicarFormatoFactura(Tabla(cn, Nothing, "SELECT p.*,CONCAT('PRE-',LPAD(pr.Id,GREATEST(6,CHAR_LENGTH(pr.Id)),'0')) AS NumeroPrestamo,CONCAT(c.Nombres,' ',c.Apellidos) Cliente,u.NombreCompleto Usuario FROM v_PagosDesglosados p JOIN Prestamos pr ON pr.Id=p.PrestamoId JOIN Clientes c ON c.Id=p.ClienteId JOIN Usuarios u ON u.Id=p.RegistradoPor WHERE (@p0=0 OR p.PrestamoId=@p0) ORDER BY p.Id DESC", id))
                 Case "MOVIMIENTOS" : Return Tabla(cn, Nothing, "SELECT * FROM v_Reporte07EstadoCuenta WHERE PrestamoId=@p0 ORDER BY Fecha,Id", id)
                 Case "FORMAS" : Return Tabla(cn, Nothing, "SELECT Codigo,Nombre FROM FormasPago WHERE Activo=1 ORDER BY Codigo")
                 Case Else : Throw New ArgumentException("Consulta inválida.")
             End Select
         End Using
+    End Function
+    Private Shared Function AplicarFormatoFactura(pagos As DataTable) As DataTable
+        If pagos Is Nothing OrElse Not pagos.Columns.Contains("NumeroRecibo") OrElse Not pagos.Columns.Contains("Id") Then Return pagos
+        For Each fila As DataRow In pagos.Rows
+            Dim numero = Convert.ToString(fila("NumeroRecibo"), Globalization.CultureInfo.InvariantCulture)
+            If numero.StartsWith("REC-", StringComparison.OrdinalIgnoreCase) Then
+                fila("NumeroRecibo") = "FAC-" & Convert.ToInt32(fila("Id"), Globalization.CultureInfo.InvariantCulture).ToString("D4", Globalization.CultureInfo.InvariantCulture)
+            End If
+        Next
+        Return pagos
     End Function
     Public Function ObtenerResumenDashboard(usuarioId As Integer) As DataSet
         Using cn = Abrir()
@@ -718,26 +731,34 @@ Public Class FinanzasRepositorio
         Return Transaccion(Function(cn, tx)
                                Autorizar(cn, tx, usuarioId, "ADMINISTRADOR", "CAJERO")
                                Dim t = Tabla(cn, tx, "SELECT * FROM Prestamos WHERE Id=@p0 FOR UPDATE", p.PrestamoId)
-                               If t.Rows.Count <> 1 Then Throw New ArgumentException("Préstamo inexistente.")
+                               If t.Rows.Count <> 1 Then Throw New ArgumentException("No se encontró el préstamo seleccionado. Actualiza la lista e inténtalo nuevamente.")
                                Dim prestamo = t.Rows(0), repetido = Tabla(cn, tx, "SELECT * FROM Pagos WHERE ClaveIdempotencia=@p0", p.Clave)
                                If repetido.Rows.Count > 0 Then
                                    Dim previo = repetido.Rows(0)
                                    If CInt(previo("PrestamoId")) <> p.PrestamoId OrElse CDec(previo("MontoPagado")) <> p.Monto OrElse CDate(previo("FechaPago")).Date <> p.Fecha.Date OrElse CStr(previo("FormaPagoCodigo")) <> p.Forma OrElse Convert.ToString(previo("ReferenciaExterna")) <> If(p.Referencia, "") OrElse CInt(previo("RegistradoPor")) <> usuarioId Then Throw New InvalidOperationException("La clave del pago ya se utilizó con otros datos.")
                                    Return CInt(previo("Id"))
                                End If
-                               If Not {"VIGENTE", "EN_MORA", "DESEMBOLSADO"}.Contains(CStr(prestamo("EstadoCodigo"))) Then Throw New ArgumentException("El préstamo no admite pagos.")
+                               If Not {"VIGENTE", "EN_MORA", "DESEMBOLSADO"}.Contains(CStr(prestamo("EstadoCodigo"))) Then Throw New ArgumentException("No se puede registrar el pago: el préstamo está " & CStr(prestamo("EstadoCodigo")).Replace("_", " ").ToLowerInvariant() & " y ya no admite cobros.")
                                Dim instante = Date.UtcNow.AddHours(-5)
                                Dim hoy = instante.Date
-                               If p.Fecha.Date <> hoy Then Throw New ArgumentException("Los pagos se registran con la fecha operativa de hoy en Panamá.")
-                               If Tabla(cn, tx, "SELECT Codigo FROM FormasPago WHERE Codigo=@p0 AND Activo=1", p.Forma).Rows.Count = 0 Then Throw New ArgumentException("Forma de pago inválida.")
+                               If p.Fecha.Date < hoy Then Throw New ArgumentException("No se puede registrar un pago con una fecha anterior a la fecha operativa de hoy (" & hoy.ToString("dd/MM/yyyy") & "). Los pagos retroactivos no están permitidos; actualiza la pantalla para cargar la fecha vigente.")
+                               If p.Fecha.Date > hoy Then Throw New ArgumentException("No se puede adelantar la fecha del pago. Solo se permiten registros con la fecha operativa de hoy (" & hoy.ToString("dd/MM/yyyy") & "); los pagos con fecha futura no están permitidos.")
+                               If Tabla(cn, tx, "SELECT Codigo FROM FormasPago WHERE Codigo=@p0 AND Activo=1", p.Forma).Rows.Count = 0 Then Throw New ArgumentException("La forma de pago seleccionada ya no está activa. Actualiza la pantalla y elige otra forma disponible.")
                                Dim cuotas = Tabla(cn, tx, "SELECT * FROM v_SaldosCuota WHERE PrestamoId=@p0 ORDER BY NumeroCuota", p.PrestamoId)
-                               Dim exigibles = cuotas.AsEnumerable().Where(Function(q) CDate(q("FechaVencimiento")).Date <= hoy AndAlso CDec(q("TotalPendiente")) > 0).ToList()
-                               Dim exigible = exigibles.Sum(Function(q) CDec(q("TotalPendiente")))
-                               If p.Monto > exigible OrElse p.Monto <= 0 Then Throw New ArgumentException("El pago supera las cuotas exigibles a hoy (" & exigible.ToString("0.00") & "). No se cobran intereses futuros ni se permiten sobrepagos.")
+                               Dim finMes = New Date(hoy.Year, hoy.Month, DateTime.DaysInMonth(hoy.Year, hoy.Month))
+                               Dim cuotasAplicables = cuotas.AsEnumerable().Where(Function(q) CDate(q("FechaVencimiento")).Date <= finMes AndAlso CDec(q("TotalPendiente")) > 0).ToList()
+                               Dim totalMes = cuotasAplicables.Sum(Function(q) CDec(q("TotalPendiente")))
+                               If totalMes <= 0D Then
+                                   Dim proximaCuota = cuotas.AsEnumerable().Where(Function(q) CDec(q("TotalPendiente")) > 0).OrderBy(Function(q) CDate(q("FechaVencimiento"))).FirstOrDefault()
+                                   Dim detalleProximaCuota = If(proximaCuota Is Nothing, String.Empty, " La próxima cuota vence el " & CDate(proximaCuota("FechaVencimiento")).ToString("dd/MM/yyyy", Globalization.CultureInfo.GetCultureInfo("es-PA")) & "; no se pueden adelantar pagos de períodos futuros.")
+                                   Throw New ArgumentException("No se puede registrar un pago ahora: no hay cuotas vencidas ni programadas para este mes con saldo pendiente." & detalleProximaCuota)
+                               End If
+                               If p.Monto > totalMes Then Throw New ArgumentException("El monto excede el total exigible de este mes (B/. " & totalMes.ToString("0.00") & "). Reduce el monto; no se permiten sobrepagos ni pagos de cuotas futuras.")
                                Dim capitalPagado As Decimal = 0D, restante = p.Monto
-                               Dim id = Insertar(cn, tx, "INSERT INTO Pagos(NumeroRecibo,PrestamoId,ClienteId,FechaPago,MontoPagado,SaldoCapitalPosterior,RegistradoPor,FormaPagoCodigo,ReferenciaExterna,ClaveIdempotencia) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9)", Numero("REC"), p.PrestamoId, prestamo("ClienteId"), instante, p.Monto, prestamo("SaldoCapital"), usuarioId, p.Forma, p.Referencia, p.Clave)
-                               For Each q In exigibles
-                                   ' Devengar el interés contractual una sola vez al entrar en cobro.
+                               Dim id = Insertar(cn, tx, "INSERT INTO Pagos(NumeroRecibo,PrestamoId,ClienteId,FechaPago,MontoPagado,SaldoCapitalPosterior,RegistradoPor,FormaPagoCodigo,ReferenciaExterna,ClaveIdempotencia) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9)", Numero("TMP"), p.PrestamoId, prestamo("ClienteId"), instante, p.Monto, prestamo("SaldoCapital"), usuarioId, p.Forma, p.Referencia, p.Clave)
+                               Escribir(cn, tx, "UPDATE Pagos SET NumeroRecibo=@p1 WHERE Id=@p0", id, "FAC-" & id.ToString("D4", Globalization.CultureInfo.InvariantCulture))
+                               For Each q In cuotasAplicables
+                                   ' Registrar el desglose contractual una sola vez al aplicar la cuota del período.
                                    For Each cargo In New String()() {New String() {"Interes", "INTERES", "Interés cuota "}, New String() {"Mora", "MORA", "Mora cuota "}, New String() {"OtrosCargos", "CARGO", "Cargos cuota "}}
                                        Dim concepto = cargo(2) & CStr(q("NumeroCuota"))
                                        If CDec(q(cargo(0))) > 0 AndAlso Tabla(cn, tx, "SELECT Id FROM MovimientosPrestamo WHERE PrestamoId=@p0 AND Tipo=@p1 AND Concepto=@p2", p.PrestamoId, cargo(1), concepto).Rows.Count = 0 Then Movimiento(cn, tx, p.PrestamoId, Nothing, cargo(1), concepto, CDec(q(cargo(0))), 0D, usuarioId, instante)
@@ -757,7 +778,7 @@ Public Class FinanzasRepositorio
                                Dim saldo = CDec(prestamo("SaldoCapital")) - capitalPagado
                                If saldo < 0 Then Throw New InvalidOperationException("El capital aplicado supera el saldo.")
                                Dim pendiente = cuotas.AsEnumerable().Sum(Function(q) CDec(q("TotalPendiente"))) - p.Monto
-                               Dim estado = If(pendiente = 0, "CANCELADO", If(exigible > p.Monto AndAlso exigibles.Any(Function(q) CDate(q("FechaVencimiento")).Date < hoy AndAlso CDec(q("TotalPendiente")) > 0), "EN_MORA", "VIGENTE"))
+                               Dim estado = If(pendiente = 0, "CANCELADO", "VIGENTE")
                                ' Volver a consultar el desglose ya aplicado para determinar mora residual.
                                If estado <> "CANCELADO" Then estado = If(Tabla(cn, tx, "SELECT Id FROM v_SaldosCuota WHERE PrestamoId=@p0 AND FechaVencimiento<@p1 AND TotalPendiente>0 LIMIT 1", p.PrestamoId, hoy).Rows.Count > 0, "EN_MORA", "VIGENTE")
                                Escribir(cn, tx, "UPDATE Prestamos SET SaldoCapital=@p1,EstadoCodigo=@p2,FechaCancelacion=@p3,TipoCancelacion=@p4,Version=Version+1 WHERE Id=@p0", p.PrestamoId, saldo, estado, If(estado = "CANCELADO", CType(Date.UtcNow, Object), Nothing), If(estado = "CANCELADO", "NORMAL", Nothing))
@@ -783,7 +804,7 @@ Public Class FinanzasRepositorio
                     sql = "SELECT CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,r.NombreCompleto AS Cliente,r.Telefono AS Teléfono,pr.Nombre AS Producto,r.NumeroCuota AS Cuota,r.FechaVencimiento AS Vencimiento,r.DiasAtraso AS Días,r.MontoVencido AS Vencido,r.MoraPendiente AS Mora FROM v_Reporte04PrestamosMora r JOIN Prestamos p ON p.Id=r.PrestamoId JOIN ProductosFinancieros pr ON pr.Id=p.ProductoId WHERE 1=1"
                     fecha = "r.FechaVencimiento" : orden = "r.FechaVencimiento,p.Id,r.NumeroCuota"
                 Case 5
-                    sql = "SELECT r.NumeroRecibo AS Recibo,CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,r.NombreCompleto AS Cliente,pr.Nombre AS Producto,r.FechaPago AS Fecha,r.MontoPagado AS Pagado,r.Capital,r.Interes AS Intereses,r.Mora,r.OtrosCargos AS Cargos,r.NombreUsuario AS Cajero FROM v_Reporte05PagosPeriodo r JOIN Prestamos p ON p.Id=r.PrestamoId JOIN ProductosFinancieros pr ON pr.Id=p.ProductoId WHERE 1=1"
+                    sql = "SELECT r.Id AS PagoId,CONCAT('FAC-',LPAD(r.Id,4,'0')) AS Recibo,CONCAT('PRE-',LPAD(p.Id,GREATEST(6,CHAR_LENGTH(p.Id)),'0')) AS Préstamo,r.NombreCompleto AS Cliente,pr.Nombre AS Producto,r.FechaPago AS Fecha,r.MontoPagado AS Pagado,r.Capital,r.Interes AS Intereses,r.Mora,r.OtrosCargos AS Cargos,r.NombreUsuario AS Cajero FROM v_Reporte05PagosPeriodo r JOIN Prestamos p ON p.Id=r.PrestamoId JOIN ProductosFinancieros pr ON pr.Id=p.ProductoId WHERE 1=1"
                     fecha = "r.FechaPago" : orden = "r.FechaPago DESC,r.Id DESC"
                 Case 7
                     ' El saldo se calcula en la vista ANTES del filtro de fechas para incluir movimientos anteriores.

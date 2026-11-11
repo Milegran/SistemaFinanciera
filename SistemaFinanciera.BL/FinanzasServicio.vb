@@ -319,10 +319,12 @@ Public Class FinanzasServicio
     End Function
     Public Function RegistrarPago(p As PagoFinanciero, usuarioId As Integer) As Integer
         If p Is Nothing OrElse p.PrestamoId <= 0 Then Throw New ArgumentException("Seleccione el préstamo.")
+        If p.Monto <= 0D Then Throw New ArgumentException("El monto del pago debe ser mayor que B/. 0.00.")
         Importe(p.Monto, "Monto pagado")
         Texto(p.Referencia, "Referencia", 100, False)
-        If Not Regex.IsMatch(If(p.Clave, ""), "^[a-f0-9]{32}$") Then Throw New ArgumentException("Vuelva a abrir el formulario de pago.")
-        If Not {"EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA"}.Contains(p.Forma) Then Throw New ArgumentException("Forma de pago inválida.")
+        If Not Regex.IsMatch(If(p.Clave, ""), "^[a-f0-9]{32}$") Then Throw New ArgumentException("La sesión del formulario de pago venció. Recarga la pantalla y vuelve a intentarlo.")
+        If Not {"EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA"}.Contains(p.Forma) Then Throw New ArgumentException("Selecciona una forma de pago válida y activa.")
+        If p.Forma <> "EFECTIVO" AndAlso String.IsNullOrWhiteSpace(p.Referencia) Then Throw New ArgumentException("Falta la referencia: es obligatoria para transferencias, cheques y tarjetas.")
         If p.Forma <> "EFECTIVO" Then Texto(p.Referencia, "Referencia de la operación", 100)
         Return repo.RegistrarPago(p, usuarioId)
     End Function
