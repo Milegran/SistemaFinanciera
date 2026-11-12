@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports SistemaFinanciera.BL
 Imports SistemaFinanciera.DAL
 Imports System.Web.Security
@@ -77,6 +77,9 @@ Public Class Acceso
             Else
                 id = Servicio.IniciarSesion(usuario.Text.Trim(), clave.Text)
             End If
+        Catch ex As AccesoBloqueadoException
+            mensaje.Text = ex.Message
+            Return
         Catch ex As ArgumentException
             mensaje.Text = If(esAltaLocal, ex.Message, "No se pudo iniciar sesión. Verifique sus datos o intente de nuevo más tarde.")
             Return
@@ -88,7 +91,11 @@ Public Class Acceso
             mensaje.Text = "No se pudo completar el acceso. Consulte al administrador."
             Return
         End Try
-        FormsAuthentication.SetAuthCookie(id.ToString(Globalization.CultureInfo.InvariantCulture), False)
+        ' Aplicar la duración configurada también a la primera cookie de acceso.
+        Dim actor=Servicio.Usuario(id)
+        Dim ahora=DateTime.Now
+        Dim ticket As New FormsAuthenticationTicket(2,id.ToString(Globalization.CultureInfo.InvariantCulture),ahora,ahora.AddMinutes(actor.MinutosInactividad),False,"",FormsAuthentication.FormsCookiePath)
+        Response.Cookies.Set(New HttpCookie(FormsAuthentication.FormsCookieName,FormsAuthentication.Encrypt(ticket)) With {.HttpOnly=True,.Secure=Request.IsSecureConnection,.Path=ticket.CookiePath})
         Session.Abandon()
         Response.Redirect("~/Default.aspx", False)
         Context.ApplicationInstance.CompleteRequest()

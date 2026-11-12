@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Globalization
 Imports System.Text
@@ -42,6 +42,7 @@ Public Class Clientes
         ddlEstadoCivil.Items.Add(New ListItem("No aplica", "NO_APLICA"))
     End Sub
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        txtNombres.MaxLength = If(ddlTipoPersona.SelectedValue = "JURIDICA", 100, 50)
         txtFechaNacimiento.Attributes("min") = ClienteServicio.HoyPanama.AddYears(-120).ToString("yyyy-MM-dd")
         txtFechaNacimiento.Attributes("max") = ClienteServicio.HoyPanama.ToString("yyyy-MM-dd")
         pnlMensaje.Visible = False

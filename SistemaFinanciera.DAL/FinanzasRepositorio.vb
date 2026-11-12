@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports MySqlConnector
 Imports SistemaFinanciera.Entities
@@ -233,6 +233,8 @@ Public Class FinanzasRepositorio
         Transaccion(Function(cn, tx)
                         Autorizar(cn, tx, usuarioId, "ADMINISTRADOR")
                         If rolId <= 0 OrElse Tabla(cn, tx, "SELECT Id FROM Roles WHERE Id=@p0 AND Activo=1", rolId).Rows.Count <> 1 Then Throw New ArgumentException("Seleccione un rol activo.")
+                        If Tabla(cn,tx,"SELECT Id FROM Usuarios WHERE NombreUsuario=@p0 AND Id<>@p1 LIMIT 1",nombreUsuario,id).Rows.Count>0 Then Throw New ArgumentException("El nombre de usuario ya está registrado. Elija otro.")
+                        If Tabla(cn,tx,"SELECT Id FROM Usuarios WHERE Correo=@p0 AND Id<>@p1 LIMIT 1",correo,id).Rows.Count>0 Then Throw New ArgumentException("El correo ya está registrado en otra cuenta.")
                         If id = usuarioId AndAlso Not activo Then Throw New InvalidOperationException("No puedes desactivar tu propia cuenta.")
                         If id = 0 Then
                             Dim nuevoId = Insertar(cn, tx, "INSERT INTO Usuarios(NombreUsuario,NombreCompleto,Correo,ContrasenaHash,Activo,DebeCambiarClave) VALUES(@p0,@p1,@p2,@p3,@p4,1)", nombreUsuario, nombreCompleto, correo, hash, activo)
@@ -386,26 +388,39 @@ Public Class FinanzasRepositorio
             Return Tabla(cn, Nothing, sql, nombre)
         End Using
     End Function
-    Public Sub ResultadoLogin(id As Integer, correcto As Boolean)
-        Dim maxIntentos=ParametroEntero("INTENTOS_MAXIMOS",5)
-        Dim minutosBloqueo=ParametroEntero("BLOQUEO_MINUTOS",15)
+    Public Function ResultadoLogin(id As Integer, correcto As Boolean) As Boolean
+        Dim maxIntentos=Math.Max(1,Math.Min(20,ParametroEntero("INTENTOS_MAXIMOS",5)))
+        Dim minutosBloqueo=Math.Max(1,Math.Min(999,ParametroEntero("BLOQUEO_MINUTOS",15)))
         Using cn = Abrir(), tx = cn.BeginTransaction()
-            Dim actualizar = If(correcto,
-                "UPDATE Usuarios SET IntentosFallidos=0,BloqueadoHastaUtc=NULL,UltimoAccesoUtc=UTC_TIMESTAMP() WHERE Id=@p0",
-                "UPDATE Usuarios SET IntentosFallidos=IF(BloqueadoHastaUtc IS NOT NULL AND BloqueadoHastaUtc<=UTC_TIMESTAMP(),1,IntentosFallidos+1),BloqueadoHastaUtc=IF(BloqueadoHastaUtc IS NOT NULL AND BloqueadoHastaUtc<=UTC_TIMESTAMP(),NULL,IF(IntentosFallidos>=@p1,DATE_ADD(UTC_TIMESTAMP(),INTERVAL @p2 MINUTE),BloqueadoHastaUtc)) WHERE Id=@p0")
-            If correcto Then
-                Escribir(cn,tx,actualizar,id)
-            Else
-                Escribir(cn,tx,actualizar,id,maxIntentos,minutosBloqueo)
+            ' Serializar todos los intentos de la cuenta, incluso los que llegan simultáneamente.
+            Dim estado=Tabla(cn,tx,"SELECT Activo,IntentosFallidos,BloqueadoHastaUtc,UTC_TIMESTAMP() AS Ahora FROM Usuarios WHERE Id=@p0 FOR UPDATE",id)
+            If estado.Rows.Count<>1 Then Return False
+            Dim fila=estado.Rows(0), ahora=CDate(fila("Ahora"))
+            If Not IsDBNull(fila("BloqueadoHastaUtc")) AndAlso CDate(fila("BloqueadoHastaUtc"))>ahora Then
+                Auditar(cn,tx,id,"ACCESO_BLOQUEADO","Usuarios",id,"Intento durante bloqueo temporal")
+                tx.Commit()
+                Return False
             End If
-            Dim estado = Tabla(cn, tx, "SELECT IntentosFallidos,BloqueadoHastaUtc FROM Usuarios WHERE Id=@p0", id)
-            Dim bloqueado = estado.Rows.Count = 1 AndAlso Not IsDBNull(estado.Rows(0)("BloqueadoHastaUtc")) AndAlso CDate(estado.Rows(0)("BloqueadoHastaUtc")) > Date.UtcNow
-            Dim accion = If(correcto, "INICIO_SESION", If(bloqueado, "BLOQUEO_TEMPORAL", "INTENTO_FALLIDO"))
-            Dim detalle = If(correcto, "Acceso concedido", If(bloqueado, "Se alcanzó el límite de intentos fallidos", "Credenciales no válidas"))
-            Auditar(cn, tx, id, accion, "Usuarios", id, detalle)
+            correcto=correcto AndAlso CBool(fila("Activo"))
+            If correcto Then
+                Escribir(cn,tx,"UPDATE Usuarios SET IntentosFallidos=0,BloqueadoHastaUtc=NULL,UltimoAccesoUtc=UTC_TIMESTAMP() WHERE Id=@p0",id)
+                Auditar(cn,tx,id,"INICIO_SESION","Usuarios",id,"Acceso concedido")
+            Else
+                Dim intentos=If(IsDBNull(fila("BloqueadoHastaUtc")),CInt(fila("IntentosFallidos")),0)+1
+                Dim bloqueado=intentos>=maxIntentos
+                Escribir(cn,tx,"UPDATE Usuarios SET IntentosFallidos=@p1,BloqueadoHastaUtc=@p2 WHERE Id=@p0",id,intentos,If(bloqueado,CObj(ahora.AddMinutes(minutosBloqueo)),DBNull.Value))
+                Auditar(cn,tx,id,If(bloqueado,"BLOQUEO_TEMPORAL","INTENTO_FALLIDO"),"Usuarios",id,If(bloqueado,"Se alcanzó el límite de intentos fallidos","Credenciales no válidas"))
+            End If
             tx.Commit()
+            Return correcto
         End Using
-    End Sub
+    End Function
+    Public Function SegundosBloqueoRestantes(id As Integer) As Integer
+        Using cn=Abrir()
+            Dim estado=Tabla(cn,Nothing,"SELECT GREATEST(0,COALESCE(TIMESTAMPDIFF(SECOND,UTC_TIMESTAMP(),BloqueadoHastaUtc),0)) AS Restantes FROM Usuarios WHERE Id=@p0",id)
+            Return If(estado.Rows.Count=1,Convert.ToInt32(estado.Rows(0)("Restantes")),0)
+        End Using
+    End Function
     Public Sub RegistrarAccesoBloqueado(id As Integer)
         Using cn = Abrir()
             Auditar(cn, Nothing, id, "ACCESO_BLOQUEADO", "Usuarios", id, "Intento de acceso durante el bloqueo temporal")

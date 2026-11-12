@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Security.Cryptography
 Imports System.Text.RegularExpressions
@@ -69,15 +69,15 @@ Public Class FinanzasServicio
     End Function
     Public Sub GuardarMetodoAdministracion(usuarioId As Integer,id As Integer,nombre As String,descripcion As String,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String,formula As String,algoritmo As String,ejemplo As String)
         If id<=0 Then Throw New ArgumentException("Seleccione un método de cálculo.")
-        Texto(nombre,"Nombre del método",100)
-        Texto(descripcion,"Descripción",500)
-        Texto(formula,"Fórmula",8000,False)
-        Texto(algoritmo,"Algoritmo",8000,False)
-        Texto(ejemplo,"Ejemplo manual",8000,False)
-        Texto(definiciones,"Variables",8000,False)
-        Texto(exprInteres,"Fórmula de interes",2000,False)
-        Texto(exprCapital,"Fórmula de capital",2000,False)
-        Texto(exprSaldo,"Fórmula de saldo",2000,False)
+        Texto(nombre,"Nombre del método",50)
+        Texto(descripcion,"Descripción",200)
+        Texto(formula,"Fórmula",1000,False)
+        Texto(algoritmo,"Algoritmo",1000,False)
+        Texto(ejemplo,"Ejemplo manual",1000,False)
+        TextoExpresion(definiciones,"Variables",2000,False)
+        TextoExpresion(exprInteres,"Fórmula de interes",500,False)
+        TextoExpresion(exprCapital,"Fórmula de capital",500,False)
+        TextoExpresion(exprSaldo,"Fórmula de saldo",500,False)
         Dim actual=repo.MetodoAdministracionPorId(usuarioId,id)
         If actual.Rows.Count<>1 Then Throw New ArgumentException("El método ya no está disponible.")
         Dim fila=actual.Rows(0)
@@ -105,13 +105,13 @@ Public Class FinanzasServicio
     End Function
     Public Function CrearMetodoAdministracion(usuarioId As Integer,codigo As String,nombre As String,descripcion As String,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String,formula As String,algoritmo As String,ejemplo As String) As Integer
         codigo=If(codigo,"").Trim().ToUpperInvariant()
-        If codigo.Length<2 OrElse codigo.Length>30 OrElse Not Regex.IsMatch(codigo,"^[A-Z][A-Z0-9_]*$") Then Throw New ArgumentException("Código: 2–30 caracteres en mayúsculas, empiece con una letra. Use letras, números y guion bajo (ej.: FRANCES_PYME).")
+        If codigo.Length<2 OrElse codigo.Length>20 OrElse Not Regex.IsMatch(codigo,"^[A-Z][A-Z0-9_]*$") Then Throw New ArgumentException("Código: 2–20 caracteres en mayúsculas, empiece con una letra. Use letras, números y guion bajo (ej.: FRANCES_PYME).")
         If MotorPrestamos.CodigosNativos.Contains(codigo) Then Throw New ArgumentException("El código " & codigo & " pertenece a un método nativo del motor.")
-        Texto(nombre,"Nombre del método",100)
-        Texto(descripcion,"Descripción",500)
-        Texto(formula,"Fórmula",8000,False)
-        Texto(algoritmo,"Algoritmo",8000,False)
-        Texto(ejemplo,"Ejemplo manual",8000,False)
+        Texto(nombre,"Nombre del método",50)
+        Texto(descripcion,"Descripción",200)
+        Texto(formula,"Fórmula",1000,False)
+        Texto(algoritmo,"Algoritmo",1000,False)
+        Texto(ejemplo,"Ejemplo manual",1000,False)
         ValidarExpresiones(definiciones,exprInteres,exprCapital,exprSaldo)
         ProbarMuestras(codigo,definiciones,exprInteres,exprCapital,exprSaldo)
         Return repo.CrearMetodoAdministracion(usuarioId,codigo,nombre.Trim(),descripcion.Trim(),If(definiciones,"").Trim(),If(exprInteres,"").Trim(),If(exprCapital,"").Trim(),If(exprSaldo,"").Trim(),If(formula,"").Trim(),If(algoritmo,"").Trim(),If(ejemplo,"").Trim())
@@ -131,11 +131,14 @@ Public Class FinanzasServicio
         Next
         Return vista
     End Function
+    Private Shared Sub TextoExpresion(valor As String, nombre As String, maximo As Integer, Optional obligatorio As Boolean = True)
+        If (obligatorio AndAlso String.IsNullOrWhiteSpace(valor)) OrElse If(valor, "").Length > maximo OrElse Regex.IsMatch(If(valor, ""), "[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\p{Cf}]") Then Throw New ArgumentException(nombre & ": revise contenido y longitud (máximo " & maximo & ").")
+    End Sub
     Private Shared Sub ValidarExpresiones(definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String)
-        Texto(definiciones,"Variables",8000,False)
-        Texto(exprInteres,"Fórmula de interes",2000)
-        Texto(exprCapital,"Fórmula de capital",2000)
-        Texto(exprSaldo,"Fórmula de saldo",2000,False)
+        TextoExpresion(definiciones,"Variables",2000,False)
+        TextoExpresion(exprInteres,"Fórmula de interes",500)
+        TextoExpresion(exprCapital,"Fórmula de capital",500)
+        TextoExpresion(exprSaldo,"Fórmula de saldo",500,False)
         ExpresionFinanciera.Construir(If(definiciones,""),If(exprInteres,""),If(exprCapital,""),If(exprSaldo,""))
     End Sub
     Private Shared Function Muestra(codigo As String,cuotas As Integer,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String) As CondicionesPrestamo
@@ -179,7 +182,7 @@ Public Class FinanzasServicio
     End Sub
     Private Shared Sub ValidarDecimalParametro(valores As IDictionary(Of String,String),codigo As String,minimo As Decimal,maximo As Decimal)
         Dim numero As Decimal
-        If Not valores.ContainsKey(codigo) OrElse Regex.Replace(valores(codigo),"\D","").Length>3 OrElse Not Decimal.TryParse(valores(codigo),Globalization.NumberStyles.AllowDecimalPoint,Globalization.CultureInfo.InvariantCulture,numero) OrElse numero<minimo OrElse numero>maximo OrElse Decimal.Round(numero,4)<>numero Then Throw New ArgumentException(codigo & ": indique hasta 3 dígitos numéricos, entre " & minimo.ToString(Globalization.CultureInfo.InvariantCulture) & " y " & maximo.ToString(Globalization.CultureInfo.InvariantCulture) & ".")
+        If Not valores.ContainsKey(codigo) OrElse Not Regex.IsMatch(If(valores(codigo),""),"^\d{1,3}(?:\.\d{1,4})?$") OrElse Not Decimal.TryParse(valores(codigo),Globalization.NumberStyles.AllowDecimalPoint,Globalization.CultureInfo.InvariantCulture,numero) OrElse numero<minimo OrElse numero>maximo OrElse Decimal.Round(numero,4)<>numero Then Throw New ArgumentException(codigo & ": indique hasta 3 enteros y 4 decimales, entre " & minimo.ToString(Globalization.CultureInfo.InvariantCulture) & " y " & maximo.ToString(Globalization.CultureInfo.InvariantCulture) & ".")
     End Sub
     Public Function ResumenUsuariosAdministracion(usuarioId As Integer) As DataTable
         Return repo.ResumenUsuariosAdministracion(usuarioId)
@@ -191,15 +194,18 @@ Public Class FinanzasServicio
     Public Sub GuardarUsuarioAdministracion(usuarioId As Integer,id As Integer,nombreUsuario As String,nombreCompleto As String,correo As String,rolId As Integer,activo As Boolean,clave As String)
         If id<0 Then Throw New ArgumentException("Usuario no válido.")
         If Not Regex.IsMatch(If(nombreUsuario,""),PatronUsuarioNuevo) Then Throw New ArgumentException("Usuario: use 3–20 caracteres, comience con letra y utilice letras, números, punto, guion o guion bajo.")
-        Texto(nombreCompleto,"Nombre completo",160)
+        Texto(nombreCompleto,"Nombre completo",80)
         If Not Regex.IsMatch(If(nombreCompleto,"" ).Trim().Normalize(),ClienteServicio.PatronNombre) OrElse Regex.Split(If(nombreCompleto,"" ).Trim(),"\s+").Length<2 Then Throw New ArgumentException("Escriba el nombre completo y al menos un apellido.")
+        Texto(correo,"Correo",35)
         Try
+            If Not Regex.IsMatch(If(correo,""),"^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$") Then Throw New ArgumentException("Correo inválido. Ejemplo: nombre@dominio.com; sin espacios.")
             Dim mail As New System.Net.Mail.MailAddress(If(correo,""))
-            If correo.Length>254 OrElse mail.Address<>correo OrElse Not mail.Host.Contains(".") Then Throw New ArgumentException("Correo inválido.")
+            If correo.Length>35 OrElse mail.Address<>correo OrElse Not mail.Host.Contains(".") Then Throw New ArgumentException("Correo inválido.")
         Catch ex As Exception When TypeOf ex Is FormatException OrElse TypeOf ex Is ArgumentException
             Throw New ArgumentException("Correo inválido.")
         End Try
         If id=0 AndAlso String.IsNullOrEmpty(clave) Then Throw New ArgumentException("La contraseña inicial es obligatoria.")
+        If rolId<=0 Then Throw New ArgumentException("Seleccione un rol activo.")
         Dim hash=""
         If Not String.IsNullOrEmpty(clave) Then
             ValidarClave(clave)
@@ -251,21 +257,29 @@ Public Class FinanzasServicio
     Public Sub EliminarNotificaciones(usuarioId As Integer)
         repo.EliminarNotificaciones(usuarioId)
     End Sub
+    Public Function PoliticaClaveActual() As Dictionary(Of String,Integer)
+        Dim reglas As New Dictionary(Of String,Integer) From {{"minimo",8},{"maximo",128},{"mayuscula",1},{"numero",1}}
+        For Each fila As DataRow In repo.PoliticaClave().Rows
+            Dim valor As Integer
+            If Not Integer.TryParse(CStr(fila("Valor")),valor) Then Throw New InvalidOperationException("La política de contraseña no es válida.")
+            Select Case CStr(fila("Codigo"))
+                Case "CLAVE_LONGITUD_MINIMA"
+                    If valor<8 OrElse valor>64 Then Throw New InvalidOperationException("Longitud de contraseña fuera de rango.")
+                    reglas("minimo")=valor
+                Case "CLAVE_MAYUSCULA" : reglas("mayuscula")=valor
+                Case "CLAVE_NUMERO" : reglas("numero")=valor
+            End Select
+        Next
+        Return reglas
+    End Function
     Private Sub ValidarClave(clave As String,Optional maximo As Integer=128)
-        Dim minimo=8,requiereMayuscula=True,requiereNumero=True
-        Try
-            For Each fila As DataRow In repo.PoliticaClave().Rows
-                Select Case CStr(fila("Codigo"))
-                    Case "CLAVE_LONGITUD_MINIMA" : Integer.TryParse(CStr(fila("Valor")),minimo)
-                    Case "CLAVE_MAYUSCULA" : requiereMayuscula=CStr(fila("Valor"))="1"
-                    Case "CLAVE_NUMERO" : requiereNumero=CStr(fila("Valor"))="1"
-                End Select
-            Next
-        Catch ex As Exception
-            Diagnostics.Trace.TraceWarning("No se pudo leer la política de contraseña; se aplican las reglas seguras predeterminadas: {0}",ex.Message)
-        End Try
-        If minimo<8 OrElse minimo>64 Then minimo=8
-        If String.IsNullOrEmpty(clave) OrElse clave.Length<minimo OrElse clave.Length>maximo OrElse (requiereMayuscula AndAlso Not Regex.IsMatch(clave,"[A-Z]")) OrElse (requiereNumero AndAlso Not Regex.IsMatch(clave,"[0-9]")) Then Throw New ArgumentException("La contraseña debe tener " & minimo.ToString() & "–" & maximo.ToString() & " caracteres" & If(requiereMayuscula," e incluir mayúscula","") & If(requiereNumero," y número","") & ".")
+        Dim reglas=PoliticaClaveActual(), faltan As New List(Of String)
+        clave=If(clave,"")
+        If clave.Length<reglas("minimo") Then faltan.Add("al menos " & reglas("minimo") & " caracteres")
+        If clave.Length>maximo Then faltan.Add("máximo " & maximo & " caracteres")
+        If reglas("mayuscula")=1 AndAlso Not Regex.IsMatch(clave,"[A-Z]") Then faltan.Add("una mayúscula (A–Z)")
+        If reglas("numero")=1 AndAlso Not Regex.IsMatch(clave,"[0-9]") Then faltan.Add("un número")
+        If faltan.Count>0 Then Throw New ArgumentException("A la contraseña le falta cumplir: " & String.Join(", ",faltan) & ".")
     End Sub
     Public Shared Function HashClave(clave As String) As String
         Dim sal(15) As Byte
@@ -320,13 +334,14 @@ Public Class FinanzasServicio
         Dim r = t.Rows(0)
         Dim id = CInt(r("Id"))
         Dim claveValida = VerificarClave(clave, CStr(r("ContrasenaHash")))
-        If Not IsDBNull(r("BloqueadoHastaUtc")) AndAlso CDate(r("BloqueadoHastaUtc")) > Date.UtcNow Then
-            repo.RegistrarAccesoBloqueado(id)
+        ' El repositorio comprueba el bloqueo con la hora de la BD y bloqueo de fila.
+        Dim correcto = CBool(r("Activo")) AndAlso claveValida
+        correcto = repo.ResultadoLogin(id, correcto)
+        If Not correcto Then
+            Dim restantes=repo.SegundosBloqueoRestantes(id)
+            If restantes>0 Then Throw New AccesoBloqueadoException(restantes)
             Throw New ArgumentException("Usuario o contraseña incorrectos.")
         End If
-        Dim correcto = CBool(r("Activo")) AndAlso claveValida
-        repo.ResultadoLogin(id, correcto)
-        If Not correcto Then Throw New ArgumentException("Usuario o contraseña incorrectos.")
         repo.ObtenerUsuario(id)
         Return id
     End Function
@@ -430,4 +445,11 @@ Public Class FinanzasServicio
         If numero=1 AndAlso (productoId<>0 OrElse prestamoId<>0) Then Throw New ArgumentException("El directorio de clientes se filtra por cliente y fecha de registro.")
         Return repo.ConsultarReporte(numero, usuarioId, desde, hasta, clienteId, productoId, prestamoId)
     End Function
+End Class
+
+Public Class AccesoBloqueadoException
+    Inherits ArgumentException
+    Public Sub New(segundos As Integer)
+        MyBase.New("Cuenta bloqueada temporalmente por alcanzar el límite de intentos fallidos. Podrá volver a intentarlo en " & CInt(Math.Ceiling(segundos / 60.0)).ToString() & " minuto(s). Durante el bloqueo no podrá ingresar, aunque la contraseña sea correcta.")
+    End Sub
 End Class

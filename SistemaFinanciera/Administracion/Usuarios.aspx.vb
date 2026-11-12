@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 
 Public Class Usuarios
@@ -28,6 +28,36 @@ Public Class Usuarios
         ElseIf Not modalUsuario.Visible Then
             Ejecutar(Sub() CargarUsuarios())
         End If
+    End Sub
+
+    Protected Sub PrepararPolitica(sender As Object,e As EventArgs) Handles Me.PreRender
+        If Not modalUsuario.Visible OrElse Not Actor.Puede("ADMINISTRADOR") Then Return
+        txtNombreCompleto.Attributes("data-regla")="nombre-persona"
+        txtNombreCompleto.Attributes("data-patron-nombre")=SistemaFinanciera.BL.ClienteServicio.PatronNombre
+        txtNombreCompleto.Attributes("data-min-palabras")="2"
+        txtNombreUsuario.Attributes("data-regla")="usuario-nuevo"
+        txtNombreUsuario.Attributes("data-patron")=SistemaFinanciera.BL.FinanzasServicio.PatronUsuarioNuevo
+        txtNombreUsuario.Attributes("data-ayuda")="Use 3–20 caracteres, comience con letra; solo letras, números, punto, guion o guion bajo."
+        txtClaveManualConfirmacion.Attributes("data-igual")=txtClaveManual.ClientID
+        If String.IsNullOrEmpty(hfUsuarioId.Value) Then
+            txtClave.Attributes("required")="required"
+        Else
+            txtClave.Attributes.Remove("required")
+        End If
+        Try
+            Dim reglas=ServicioFinanzas.PoliticaClaveActual()
+            For Each campo In {txtClave,txtClaveManual}
+                campo.Attributes("data-password-policy")="true"
+                For Each regla In reglas
+                    campo.Attributes("data-" & regla.Key)=regla.Value.ToString()
+                Next
+            Next
+            txtClave.Attributes("data-obligatoria")=If(String.IsNullOrEmpty(hfUsuarioId.Value),"1","0")
+            txtClaveManual.Attributes("data-obligatoria")="1"
+        Catch ex As Exception
+            errorModal.Text="No se pudo cargar la política de contraseña. Inténtelo de nuevo."
+            btnGuardar.Enabled=False
+        End Try
     End Sub
 
     Private Sub CargarUsuarios()
@@ -73,6 +103,7 @@ Public Class Usuarios
     End Sub
 
     Protected Sub Nuevo(sender As Object,e As EventArgs) Handles btnNuevo.Click
+        errorModal.Text=""
         LimpiarFormulario()
         litTituloModal.Text="Crear usuario"
         litDialogLead.Text="Completa los datos de acceso del usuario."
@@ -85,7 +116,8 @@ Public Class Usuarios
     End Sub
 
     Protected Sub Guardar(sender As Object,e As EventArgs) Handles btnGuardar.Click
-        Ejecutar(Sub()
+        errorModal.Text=""
+        Try
             Dim id As Integer=0,rolId As Integer=0
             Integer.TryParse(hfUsuarioId.Value,id)
             If String.Equals(hfModoRestablecer.Value,"MANUAL",StringComparison.Ordinal) Then
@@ -103,7 +135,12 @@ Public Class Usuarios
             LimpiarModoModal()
             Notificar(If(id=0,"Usuario creado correctamente. Se solicitará cambiar la clave en su primer ingreso.","Usuario actualizado correctamente."))
             CargarUsuarios()
-        End Sub)
+        Catch ex As Exception When TypeOf ex Is ArgumentException OrElse TypeOf ex Is InvalidOperationException
+            errorModal.Text=ex.Message
+        Catch ex As Exception
+            Diagnostics.Trace.TraceError(ex.ToString())
+            errorModal.Text="No se pudo guardar el usuario. Revise los datos o intente de nuevo."
+        End Try
     End Sub
 
     Protected Sub UsuarioCommand(sender As Object,e As GridViewCommandEventArgs)

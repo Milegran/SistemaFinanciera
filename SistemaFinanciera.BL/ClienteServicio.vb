@@ -66,8 +66,8 @@ Public Class ClienteServicio
         If c.TipoIdentificacion = "PASAPORTE" AndAlso Not Regex.IsMatch(c.Identificacion, PatronPasaporte) Then errores.Add("El pasaporte debe contener entre 5 y 30 letras o números.")
         If c.TipoIdentificacion = "RUC" AndAlso Not Regex.IsMatch(c.Identificacion, PatronRuc) Then errores.Add("Indique el RUC en tres grupos numéricos separados por guiones.")
         ComprobarTexto(c.Identificacion, "Identificación", 30, True, errores)
-        ComprobarTexto(c.Nombres, "Nombres o razón social", 120, True, errores)
-        ComprobarTexto(c.Apellidos, "Apellidos", 120, c.TipoPersona = "NATURAL", errores)
+        ComprobarTexto(c.Nombres, "Nombres o razón social", If(c.TipoPersona = "JURIDICA", 100, 50), True, errores)
+        ComprobarTexto(c.Apellidos, "Apellidos", 50, c.TipoPersona = "NATURAL", errores)
         If c.TipoPersona = "NATURAL" Then
             If Not Regex.IsMatch(c.Nombres, PatronNombre) Then errores.Add("Los nombres solo admiten letras, acentos, espacios, apóstrofos, puntos y guiones entre nombres.")
             If Not Regex.IsMatch(c.Apellidos, PatronNombre) Then errores.Add("Los apellidos solo admiten letras, acentos, espacios, apóstrofos, puntos y guiones entre apellidos.")
@@ -82,7 +82,7 @@ Public Class ClienteServicio
             c.EstadoCivil = "NO_APLICA"
         End If
         If Not Regex.IsMatch(c.Telefono, PatronTelefono) Then errores.Add("El teléfono debe tener 7 u 8 dígitos y no puede contener solo ceros; puede incluir +507.")
-        ComprobarTexto(c.Correo, "Correo", 254, True, errores)
+        ComprobarTexto(c.Correo, "Correo", 35, True, errores)
         Try
             Dim email As New MailAddress(c.Correo)
             If email.Address <> c.Correo OrElse Not email.Host.Contains(".") Then errores.Add("Indique un correo válido.")
@@ -91,15 +91,15 @@ Public Class ClienteServicio
         Catch ex As ArgumentException
             errores.Add("Indique un correo válido.")
         End Try
-        ComprobarTexto(c.Direccion, "Dirección", 300, True, errores)
+        ComprobarTexto(c.Direccion, "Dirección", 200, True, errores)
         If Not Regex.IsMatch(If(c.Direccion, ""), "\p{L}") Then errores.Add("La dirección debe incluir una descripción con letras.")
         If Not Regex.IsMatch(If(c.CodigoProvincia, ""), "^[0-9]{2}$") OrElse Not Regex.IsMatch(If(c.CodigoDistrito, ""), "^[0-9]{4}$") OrElse Not Regex.IsMatch(If(c.CodigoCorregimiento, ""), "^[0-9]{6}$") Then errores.Add("Seleccione provincia, distrito y corregimiento del catálogo.")
         ComprobarTexto(c.Provincia, "Provincia o comarca", 80, True, errores)
         ComprobarTexto(c.Distrito, "Distrito", 150, True, errores)
         ComprobarTexto(c.Corregimiento, "Corregimiento", 150, True, errores)
-        ComprobarTexto(c.Ocupacion, "Información laboral o actividad económica", 200, True, errores)
+        ComprobarTexto(c.Ocupacion, "Información laboral o actividad económica", 80, True, errores)
         If Not Regex.IsMatch(If(c.Ocupacion, ""), "\p{L}") Then errores.Add("Describa la ocupación o actividad económica con letras.")
-        ComprobarTexto(c.Referencias, "Referencias", 1000, True, errores)
+        ComprobarTexto(c.Referencias, "Referencias", 300, True, errores)
         If Not ReferenciasValidas(c.Referencias) Then errores.Add("Incluya el nombre de la referencia y un teléfono válido de 7 u 8 dígitos. Puede usar texto libre y saltos de línea.")
         If c.Ingresos < 0D OrElse c.Ingresos > 999999999999.99D OrElse Decimal.Round(c.Ingresos, 2) <> c.Ingresos Then errores.Add("Los ingresos deben ser no negativos y tener como máximo dos decimales.")
         Return errores

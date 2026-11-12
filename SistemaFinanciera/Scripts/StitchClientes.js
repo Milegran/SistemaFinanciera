@@ -112,7 +112,8 @@
             field('txtTelefono').autocomplete = 'tel';
             field('txtCorreo').autocomplete = 'email';
             field('txtIngresos').inputMode = 'decimal';
-            field('txtReferencias').maxLength = 1000;
+            field('txtReferencias').maxLength = 300;
+            field('txtNombres').maxLength = natural() ? 50 : 100;
             field('txtFechaNacimiento').min = rules.fechaMinima;
             field('txtFechaNacimiento').max = rules.fechaMaxima;
         }

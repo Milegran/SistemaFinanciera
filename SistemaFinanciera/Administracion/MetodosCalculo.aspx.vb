@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Imports System.Data
 Imports System.Globalization
 Imports System.Text
@@ -108,7 +108,7 @@ Public Class MetodosCalculoAdmin
     End Sub
 
     Private Sub MostrarErrorEditar(mensaje As String)
-        litErrorEditar.Text=Server.HtmlEncode(mensaje)
+        litErrorEditar.Text=mensaje
         pnlErrorEditar.Visible=True
         modalEditarMetodo.Visible=True
     End Sub
@@ -166,7 +166,7 @@ Public Class MetodosCalculoAdmin
     End Sub
 
     Private Sub MostrarErrorCrear(mensaje As String)
-        litErrorCrear.Text=Server.HtmlEncode(mensaje)
+        litErrorCrear.Text=mensaje
         pnlErrorCrear.Visible=True
         pnlPreviewCrear.Visible=False
         modalCrearMetodo.Visible=True

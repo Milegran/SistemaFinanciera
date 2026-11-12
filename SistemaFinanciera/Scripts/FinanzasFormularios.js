@@ -1,4 +1,4 @@
-// Validación de captura para Acceso y los módulos financieros.
+﻿// Validación de captura para Acceso y los módulos financieros.
 // El servidor vuelve a comprobar todas las reglas antes de persistir datos.
 document.addEventListener('DOMContentLoaded', () => {
     const scopes = Array.from(document.querySelectorAll('[data-finanzas-form]'));
@@ -46,7 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (key === 'referencia') required = field(scope, 'forma').value !== 'EFECTIVO';
         if (el.validity.badInput) return 'Introduzca un número válido.';
+        if (el.type === 'password' && el.validity.customError) return el.validationMessage;
         if (!value) return required ? 'Este campo es obligatorio.' : '';
+        if (el.dataset.minPalabras && value.split(/\s+/).length < Number(el.dataset.minPalabras)) return 'Escriba el nombre y al menos un apellido.';
         if (numeric(el) && el.dataset.digitos && raw.replace(/\D/g, '').length > Number(el.dataset.digitos)) return 'Use máximo ' + el.dataset.digitos + ' dígitos numéricos.';
         if (el.type !== 'password' && forbidden.test(value)) return 'No se admiten estos símbolos o caracteres invisibles.';
         if (el.maxLength > 0 && raw.length > el.maxLength) return 'Máximo ' + el.maxLength + ' caracteres.';

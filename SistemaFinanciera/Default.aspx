@@ -1,4 +1,4 @@
-<%@ Page Title="Inicio" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="false" CodeBehind="Default.aspx.vb" Inherits="SistemaFinanciera._Default" %>
+﻿<%@ Page Title="Inicio" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="false" CodeBehind="Default.aspx.vb" Inherits="SistemaFinanciera._Default" %>
 <asp:Content ID="DashboardHead" ContentPlaceHolderID="HeadContent" runat="server">
     <script src="<%= ResolveUrl("~/Scripts/Dashboard.js?v=2") %>" defer="defer"></script>
 </asp:Content>
