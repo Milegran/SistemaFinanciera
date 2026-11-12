@@ -10,7 +10,7 @@ Esta tabla indica soporte de datos, no funcionalidad implementada. Clientes, pro
 | Clientes y datos mínimos | 6 | Clientes, EstadosCiviles, ReferenciasCliente; referencias estructuradas pendientes de UI |
 | Ubicación dependiente | 6 | provincia, distrito, corregimiento; catálogos suministrados cargados |
 | Productos y condiciones | 3, 5, 7 | ProductosFinancieros, ProductoMetodos, ProductoPeriodicidades, Tasas, TiposTasa, Periodicidades |
-| Cinco métodos extensibles | 4, 13, 18–19 | MetodosCalculo; cinco algoritmos y abstracción de BL pendientes |
+| Cinco métodos extensibles | 4, 13, 18–19 | MetodosCalculo; cinco algoritmos implementados en BL (IMetodoCalculoPrestamo) y métodos nuevos con fórmulas propias |
 | Solicitud, evaluación, aprobación/rechazo | 7 | Solicitudes, Estados; transiciones en BL y eventos en Auditoria pendientes |
 | Formalización, desembolso y parámetros | 5, 7, 10 | Prestamos; condiciones contractuales y relaciones con Solicitudes |
 | Amortización y simulación | 4, 8 | Cuotas y MetodosCalculo; la simulación puede calcularse sin persistir |

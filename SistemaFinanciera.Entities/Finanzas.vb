@@ -52,6 +52,10 @@ Public Class CondicionesPrestamo
     Public Property CantidadCuotas As Integer
     Public Property FechaPrimerPago As Date
     Public Property Metodo As String
+    Public Property Definiciones As String
+    Public Property ExprInteres As String
+    Public Property ExprCapital As String
+    Public Property ExprSaldo As String
 End Class
 Public Class CuotaPlan
     Public Property Numero As Integer

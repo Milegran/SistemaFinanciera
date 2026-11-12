@@ -907,6 +907,9 @@ CREATE TABLE MetodosCalculo (
   ClaseImplementacion VARCHAR(200) NULL,
   Formula TEXT NULL,
   Variables TEXT NULL,
+  ExprInteres VARCHAR(2000) NULL COMMENT 'Fórmula de interes por período; NULL en los métodos nativos',
+  ExprCapital VARCHAR(2000) NULL COMMENT 'Fórmula de capital por período; NULL en los métodos nativos',
+  ExprSaldo VARCHAR(2000) NULL COMMENT 'Fórmula de saldo por período; vacía o NULL = saldo - capital',
   Algoritmo TEXT NULL,
   EjemploManual TEXT NULL,
   CHECK (Activo IN (0,1)),
@@ -1364,6 +1367,22 @@ CREATE VIEW v_Reporte10ComparativoMetodos AS
  LEFT JOIN (SELECT PrestamoId,SUM(Interes+InteresCapitalizado) Interes,SUM(Mora) Mora FROM Cuotas GROUP BY PrestamoId) q ON q.PrestamoId=p.Id
  GROUP BY p.MetodoId,m.Nombre,DATE(p.FechaDesembolso);
 
+
+CREATE TABLE Notificaciones (
+  Id BIGINT NOT NULL AUTO_INCREMENT,
+  UsuarioId INT NOT NULL,
+  Modulo VARCHAR(40) NOT NULL,
+  Accion VARCHAR(80) NOT NULL,
+  Titulo VARCHAR(140) NOT NULL,
+  Mensaje VARCHAR(255) NOT NULL,
+  CreadaUtc DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  LeidaUtc DATETIME NULL,
+  PRIMARY KEY (Id),
+  KEY ix_notificaciones_usuario_fecha (UsuarioId, CreadaUtc, Id),
+  KEY ix_notificaciones_usuario_lectura (UsuarioId, LeidaUtc),
+  CONSTRAINT fk_notificaciones_usuario FOREIGN KEY (UsuarioId)
+    REFERENCES Usuarios(Id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- La auditoría es inmutable. El usuario SQL de la aplicación tampoco debe tener permisos DDL.
 DELIMITER $$

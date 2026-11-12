@@ -365,7 +365,11 @@ Public Class Solicitudes
             .Intervalo = CInt(periodicidad.Rows(0)("Intervalo")),
             .CantidadCuotas = CInt(r("CantidadCuotas")),
             .FechaPrimerPago = fechaPrimerPago,
-            .Metodo = CStr(metodos.Rows(0)("Codigo"))
+            .Metodo = CStr(metodos.Rows(0)("Codigo")),
+            .Definiciones = TextoDato(metodos.Rows(0)("Variables"), ""),
+            .ExprInteres = TextoDato(metodos.Rows(0)("ExprInteres"), ""),
+            .ExprCapital = TextoDato(metodos.Rows(0)("ExprCapital"), ""),
+            .ExprSaldo = TextoDato(metodos.Rows(0)("ExprSaldo"), "")
         }
         Return New MotorPrestamos().Generar(condiciones)
     End Function

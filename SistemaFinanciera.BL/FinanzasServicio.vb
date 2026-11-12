@@ -67,15 +67,91 @@ Public Class FinanzasServicio
     Public Function MetodosAdministracion(usuarioId As Integer) As DataTable
         Return repo.MetodosAdministracion(usuarioId)
     End Function
-    Public Sub GuardarMetodoAdministracion(usuarioId As Integer,id As Integer,nombre As String,descripcion As String,formula As String,variables As String,algoritmo As String,ejemplo As String)
+    Public Sub GuardarMetodoAdministracion(usuarioId As Integer,id As Integer,nombre As String,descripcion As String,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String,formula As String,algoritmo As String,ejemplo As String)
         If id<=0 Then Throw New ArgumentException("Seleccione un método de cálculo.")
         Texto(nombre,"Nombre del método",100)
         Texto(descripcion,"Descripción",500)
         Texto(formula,"Fórmula",8000,False)
-        Texto(variables,"Variables",8000,False)
         Texto(algoritmo,"Algoritmo",8000,False)
         Texto(ejemplo,"Ejemplo manual",8000,False)
-        repo.GuardarMetodoAdministracion(usuarioId,id,nombre.Trim(),descripcion.Trim(),If(formula,"").Trim(),If(variables,"").Trim(),If(algoritmo,"").Trim(),If(ejemplo,"").Trim())
+        Texto(definiciones,"Variables",8000,False)
+        Texto(exprInteres,"Fórmula de interes",2000,False)
+        Texto(exprCapital,"Fórmula de capital",2000,False)
+        Texto(exprSaldo,"Fórmula de saldo",2000,False)
+        Dim actual=repo.MetodoAdministracionPorId(usuarioId,id)
+        If actual.Rows.Count<>1 Then Throw New ArgumentException("El método ya no está disponible.")
+        Dim fila=actual.Rows(0)
+        If EsMetodoExpresion(fila("ExprCapital"),fila("ExprInteres")) Then
+            ValidarExpresiones(definiciones,exprInteres,exprCapital,exprSaldo)
+            ProbarMuestras(CStr(fila("Codigo")),definiciones,exprInteres,exprCapital,exprSaldo)
+            definiciones=If(definiciones,"").Trim() : exprInteres=If(exprInteres,"").Trim()
+            exprCapital=If(exprCapital,"").Trim() : exprSaldo=If(exprSaldo,"").Trim()
+        Else
+            definiciones=ValorBD(fila,"Variables")
+            exprInteres=ValorBD(fila,"ExprInteres")
+            exprCapital=ValorBD(fila,"ExprCapital")
+            exprSaldo=ValorBD(fila,"ExprSaldo")
+        End If
+        repo.GuardarMetodoAdministracion(usuarioId,id,nombre.Trim(),descripcion.Trim(),definiciones,exprInteres,exprCapital,exprSaldo,If(formula,"").Trim(),If(algoritmo,"").Trim(),If(ejemplo,"").Trim())
+    End Sub
+    Public Shared Function EsMetodoExpresion(exprCapital As Object,exprInteres As Object) As Boolean
+        Return TieneFormula(exprCapital) OrElse TieneFormula(exprInteres)
+    End Function
+    Private Shared Function TieneFormula(valor As Object) As Boolean
+        Return valor IsNot Nothing AndAlso Not IsDBNull(valor) AndAlso CStr(valor).Trim()<>""
+    End Function
+    Private Shared Function ValorBD(fila As DataRow,columna As String) As String
+        Return If(IsDBNull(fila(columna)),Nothing,CStr(fila(columna)))
+    End Function
+    Public Function CrearMetodoAdministracion(usuarioId As Integer,codigo As String,nombre As String,descripcion As String,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String,formula As String,algoritmo As String,ejemplo As String) As Integer
+        codigo=If(codigo,"").Trim().ToUpperInvariant()
+        If codigo.Length<2 OrElse codigo.Length>30 OrElse Not Regex.IsMatch(codigo,"^[A-Z][A-Z0-9_]*$") Then Throw New ArgumentException("Código: 2–30 caracteres en mayúsculas, empiece con una letra. Use letras, números y guion bajo (ej.: FRANCES_PYME).")
+        If MotorPrestamos.CodigosNativos.Contains(codigo) Then Throw New ArgumentException("El código " & codigo & " pertenece a un método nativo del motor.")
+        Texto(nombre,"Nombre del método",100)
+        Texto(descripcion,"Descripción",500)
+        Texto(formula,"Fórmula",8000,False)
+        Texto(algoritmo,"Algoritmo",8000,False)
+        Texto(ejemplo,"Ejemplo manual",8000,False)
+        ValidarExpresiones(definiciones,exprInteres,exprCapital,exprSaldo)
+        ProbarMuestras(codigo,definiciones,exprInteres,exprCapital,exprSaldo)
+        Return repo.CrearMetodoAdministracion(usuarioId,codigo,nombre.Trim(),descripcion.Trim(),If(definiciones,"").Trim(),If(exprInteres,"").Trim(),If(exprCapital,"").Trim(),If(exprSaldo,"").Trim(),If(formula,"").Trim(),If(algoritmo,"").Trim(),If(ejemplo,"").Trim())
+    End Function
+    Public Function ProbarSistemaExpresiones(definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String) As DataTable
+        ValidarExpresiones(definiciones,exprInteres,exprCapital,exprSaldo)
+        Dim vista As New DataTable("VistaPrevia")
+        vista.Columns.Add("Numero",GetType(Integer))
+        vista.Columns.Add("Fecha",GetType(Date))
+        vista.Columns.Add("Capital",GetType(Decimal))
+        vista.Columns.Add("Interes",GetType(Decimal))
+        vista.Columns.Add("Cuota",GetType(Decimal))
+        vista.Columns.Add("Saldo",GetType(Decimal))
+        Dim c=Muestra("VISTA_PREVIA",12,definiciones,exprInteres,exprCapital,exprSaldo)
+        For Each q In motor.Generar(c)
+            vista.Rows.Add(q.Numero,q.Fecha,q.Capital,q.Interes,q.Cuota,q.Saldo)
+        Next
+        Return vista
+    End Function
+    Private Shared Sub ValidarExpresiones(definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String)
+        Texto(definiciones,"Variables",8000,False)
+        Texto(exprInteres,"Fórmula de interes",2000)
+        Texto(exprCapital,"Fórmula de capital",2000)
+        Texto(exprSaldo,"Fórmula de saldo",2000,False)
+        ExpresionFinanciera.Construir(If(definiciones,""),If(exprInteres,""),If(exprCapital,""),If(exprSaldo,""))
+    End Sub
+    Private Shared Function Muestra(codigo As String,cuotas As Integer,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String) As CondicionesPrestamo
+        Return New CondicionesPrestamo With {
+            .Monto=1000D,.TasaAnual=24D,.TipoTasa="NOMINAL_ANUAL",.CapitalizacionesAnuales=12D,.PeriodosAnuales=12D,
+            .Unidad="MESES",.Intervalo=1,.CantidadCuotas=cuotas,.FechaPrimerPago=Date.Today.AddMonths(1),
+            .Metodo=codigo,.Definiciones=If(definiciones,""),.ExprInteres=If(exprInteres,""),.ExprCapital=If(exprCapital,""),.ExprSaldo=If(exprSaldo,"")}
+    End Function
+    Private Sub ProbarMuestras(codigo As String,definiciones As String,exprInteres As String,exprCapital As String,exprSaldo As String)
+        For Each cuotas In {1,3,12}
+            Try
+                motor.Generar(Muestra(codigo,cuotas,definiciones,exprInteres,exprCapital,exprSaldo))
+            Catch ex As ArgumentException
+                Throw New ArgumentException("Las fórmulas no generan un calendario válido en la prueba con " & cuotas.ToString() & " cuota(s): " & ex.Message)
+            End Try
+        Next
     End Sub
     Public Sub CambiarEstadoMetodoAdministracion(usuarioId As Integer,id As Integer,activo As Boolean)
         repo.CambiarEstadoMetodoAdministracion(usuarioId,id,activo)
@@ -161,6 +237,20 @@ Public Class FinanzasServicio
         If id<=0 Then Throw New ArgumentException("Seleccione un registro de auditoría.")
         Return repo.DetalleAuditoria(usuarioId,id)
     End Function
+    Public Function ConsultarNotificaciones(usuarioId As Integer) As DataTable
+        Return repo.ConsultarNotificaciones(usuarioId)
+    End Function
+    Public Sub MarcarNotificacionLeida(usuarioId As Integer,id As Long)
+        If id<=0 Then Throw New ArgumentException("Seleccione una notificación válida.")
+        repo.MarcarNotificacionLeida(usuarioId,id)
+    End Sub
+    Public Sub EliminarNotificacion(usuarioId As Integer,id As Long)
+        If id<=0 Then Throw New ArgumentException("Seleccione una notificación válida.")
+        repo.EliminarNotificacion(usuarioId,id)
+    End Sub
+    Public Sub EliminarNotificaciones(usuarioId As Integer)
+        repo.EliminarNotificaciones(usuarioId)
+    End Sub
     Private Sub ValidarClave(clave As String,Optional maximo As Integer=128)
         Dim minimo=8,requiereMayuscula=True,requiereNumero=True
         Try

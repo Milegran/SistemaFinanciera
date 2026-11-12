@@ -65,6 +65,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClienteServicio.vb" />
+    <Compile Include="ExpresionFinanciera.vb" />
     <Compile Include="FinanzasServicio.vb" />
     <Compile Include="CalculosPrestamos.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />

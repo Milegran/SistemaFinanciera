@@ -249,7 +249,18 @@ Public Class Clientes
                      c.Corregimiento = If(ddlCorregimiento.SelectedValue = "", "", ddlCorregimiento.SelectedItem.Text)
                      c.Ocupacion = txtOcupacion.Text.Trim()
                      c.Referencias = txtReferencias.Text.Trim()
+                     Dim esNuevo = c.Id = 0
                      Dim id = Servicio.Guardar(c)
+                     Try
+                         Dim evento = If(esNuevo, "CLIENTE_CREADO", "CLIENTE_ACTUALIZADO")
+                         Dim configuracion = ConfigurationManager.ConnectionStrings("SistemaFinanciera")
+                         If configuracion IsNot Nothing Then
+                             Dim repositorioFinanzas As New FinanzasRepositorio(configuracion.ConnectionString)
+                             repositorioFinanzas.RegistrarEventoCliente(Actor.Id, evento, id)
+                         End If
+                     Catch ex As Exception
+                         Diagnostics.Trace.TraceError("No se pudo notificar el guardado del cliente {0}: {1}", id, ex.ToString())
+                     End Try
                      ClienteId = 0
                      ViewState.Remove("ClienteVersion")
                      pnlFormularioCliente.Visible = False
@@ -275,6 +286,17 @@ Public Class Clientes
     Public Function Iniciales(valor As Object) As String
         Dim palabras = Convert.ToString(valor).Split(New Char() {" "c}, StringSplitOptions.RemoveEmptyEntries)
         Return String.Concat(palabras.Take(2).Select(Function(palabra) palabra.Substring(0, 1))).ToUpperInvariant()
+    End Function
+    Public Function AvatarCliente(id As Object) As String
+        Dim identificador As Integer
+        If id Is Nothing OrElse Not Integer.TryParse(Convert.ToString(id, CultureInfo.InvariantCulture), identificador) Then Return "tone-4"
+        Select Case Math.Abs(identificador Mod 5)
+            Case 1 : Return "tone-1"
+            Case 2 : Return "tone-2"
+            Case 3 : Return "tone-5"
+            Case 4 : Return "tone-3"
+            Case Else : Return "tone-4"
+        End Select
     End Function
     Protected Sub ClienteRowDataBound(sender As Object, e As GridViewRowEventArgs)
         If e.Row.RowType <> DataControlRowType.DataRow Then Return
@@ -303,7 +325,7 @@ Public Class Clientes
         Dim ubicacion = String.Join(", ", New String() {c.Distrito, c.Provincia}.Where(Function(x) Not String.IsNullOrWhiteSpace(x)))
         Dim claseEstado = If(c.Activo, "customer-status", "customer-status is-inactive")
         Dim tipoId = If(c.TipoIdentificacion = "RUC", "RUC: ", "Cédula: ")
-        Return "<div class='customer-detail-identity'><span class='customer-detail-avatar tone-" & (Math.Abs(c.Id Mod 5) + 1).ToString(CultureInfo.InvariantCulture) & "'>" &
+        Return "<div class='customer-detail-identity'><span class='person-avatar customer-detail-avatar " & AvatarCliente(c.Id) & "'>" &
             Server.HtmlEncode(Iniciales(c.NombreCompleto)) & "</span><div><div class='customer-detail-name'><h1>" & Server.HtmlEncode(c.NombreCompleto) & "</h1><span class='" & claseEstado & "'>" & Server.HtmlEncode(c.Estado) &
             "</span></div><p>" & Server.HtmlEncode(tipoId & c.Identificacion) & If(String.IsNullOrWhiteSpace(ubicacion), "", " · " & Server.HtmlEncode(ubicacion & ", República de Panamá")) & "</p></div></div>"
     End Function

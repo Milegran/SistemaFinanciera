@@ -11,6 +11,40 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    const notificationToggle = document.getElementById('notificationsToggle');
+    const notificationPanel = document.getElementById('pnlNotificaciones');
+    const notificationClose = document.querySelector('[data-close-notifications]');
+    const notificationToast = document.querySelector('.cw-notification-toast');
+    function closeNotifications() {
+        if (!notificationToggle || !notificationPanel) return;
+        notificationPanel.hidden = true;
+        notificationToggle.setAttribute('aria-expanded', 'false');
+    }
+    if (notificationClose) notificationClose.addEventListener('click', closeNotifications);
+    if (notificationToggle && notificationPanel) {
+        notificationPanel.hidden = true;
+        notificationToggle.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const open = notificationPanel.hidden;
+            notificationPanel.hidden = !open;
+            notificationToggle.setAttribute('aria-expanded', String(open));
+        });
+        notificationPanel.addEventListener('click', function (event) { event.stopPropagation(); });
+        document.addEventListener('click', closeNotifications);
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') closeNotifications();
+        });
+    }
+    if (notificationToast) {
+        const closeToast = notificationToast.querySelector('[data-close-notification-toast]');
+        function dismissToast() {
+            notificationToast.classList.add('is-dismissed');
+            window.setTimeout(function () { notificationToast.hidden = true; }, 180);
+        }
+        if (closeToast) closeToast.addEventListener('click', dismissToast);
+        window.setTimeout(dismissToast, 6500);
+    }
+
     const menu = document.getElementById('mobileMenu');
     const rail = document.getElementById('sidebar');
     const backdrop = document.getElementById('menuBackdrop');

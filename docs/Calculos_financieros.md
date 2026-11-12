@@ -44,4 +44,18 @@ Esta convención permite comparar interés simple/compuesto sobre un mismo capit
 
 `IMetodoCalculoPrestamo.Generar` recibe condiciones y tasa periódica. `MotorPrestamos.Registrar` permite incorporar otra implementación. El motor asigna fechas y verifica cardinalidad, capital total, saldos e importes; no contiene un bloque de selección por cada cuota de cada método.
 
-Tests/FinanzasTests.cs compara los ejemplos manuales anteriores con importes literales esperados. Además cubre capitales de 0.01, 1 y 10000000, plazos de 3 y 120 períodos, tasa cero, tasa efectiva equivalente, periodicidad de 15 días y fechas de fin de mes. No son pruebas únicamente de la fórmula consigo misma: la integración verifica que el dinero aplicado y los movimientos coincidan con los recibos y saldos reales.
+### Métodos creados con fórmulas propias
+
+Administración → Métodos de cálculo → “Nuevo método” crea un sistema de cálculo completo, sin alias de estrategia. El formulario pide tres piezas que ejecuta el motor de la capa BL:
+
+- **Variables (definiciones):** una por línea, `nombre = expresión` (ej.: `cuota = P*i/(1-(1+i)^(-n))`). Disponibles en las fórmulas: `P, i, r, n, k, saldo, f, interes_acum, capital_acum` más lo que se defina antes; `#` comenta hasta fin de línea; los identificadores no distinguen mayúsculas.
+- **Fórmula de interes** y **fórmula de capital** (obligatorias): se evalúan en ese orden en cada período; el interes ya calculado queda como `interes` y el capital resultante como `capital`.
+- **Fórmula de saldo** (opcional): vacía significa `saldo - capital`.
+
+Funciones: `if, and, or, not, min, max, abs, round, floor, ceil, pow` y operadores `+ - * / ^ = <> < > <= >= and or not` con precedencia de Excel (`^` asociativa a la derecha; `-2^2 = -4`). Todo se calcula en `Decimal` con redondeo de dinero a 2 decimales (away from zero); coma decimal prohibida (solo punto), errores en español y límites duros: 2000 caracteres, 200 elementos, 30 niveles de anidamiento, 30 definiciones.
+
+El despacho del motor: si `Metodo` es uno de los cinco códigos nativos (`FRANCES`, `ALEMAN`, `AMERICANO`, `SIMPLE`, `COMPUESTO`) gana la implementación de código; si no, ejecuta `MetodoExpresion` con las columnas `ExprInteres/ExprCapital/ExprSaldo`. Los códigos nativos están reservados para el alta de métodos.
+
+Validación antes de guardar (creación y edición de métodos con fórmulas): análisis estático (variables reservadas no se sombream, definiciones en orden, `interes` antes que `capital` y `saldo`) más una prueba de calendario con 1, 3 y 12 cuotas (B/. 1,000, tasa anual 24% nominal) que exige cerrar en cero y amortizar el capital — el mismo motor y las mismas post-condiciones (cardinalidad, capital total, sin saldos negativos) que cualquier préstamo real. El botón «Probar calendario» muestra una vista previa de 12 cuotas sin guardar nada. Los métodos nativos se editan solo en ficha documental: sus columnas de fórmula se conservan en NULL.
+
+Tests/FinanzasTests.cs compara los ejemplos manuales anteriores con importes literales esperados. Además cubre capitales de 0.01, 1 y 10000000, plazos de 3 y 120 períodos, tasa cero, tasa efectiva equivalente, periodicidad de 15 días y fechas de fin de mes. La compuerta de captura (`-SoloCaptura`, sin base de datos) agrega pruebas unitarias del parser (precedencia, redondeo, límites, errores en español) y el **diferencial dorado**: las fórmulas declaradas de los cinco sistemas se ejecutan contra el motor nativo y deben coincidir fila por fila (Capital, Interés, Cuota, Saldo, Fecha) en seis fixtures por sistema. No son pruebas únicamente de la fórmula consigo misma: la integración verifica que el dinero aplicado y los movimientos coincidan con los recibos y saldos reales.

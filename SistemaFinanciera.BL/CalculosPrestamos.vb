@@ -5,6 +5,7 @@ Public Interface IMetodoCalculoPrestamo
     Function Generar(c As CondicionesPrestamo, tasaPeriodica As Decimal) As List(Of CuotaPlan)
 End Interface
 Public Class MotorPrestamos
+    Public Shared ReadOnly CodigosNativos As String() = {"FRANCES", "ALEMAN", "AMERICANO", "SIMPLE", "COMPUESTO"}
     Private ReadOnly metodos As New Dictionary(Of String, IMetodoCalculoPrestamo) From {
         {"FRANCES", New MetodoFrances()}, {"ALEMAN", New MetodoAleman()}, {"AMERICANO", New MetodoAmericano()},
         {"SIMPLE", New InteresSimple()}, {"COMPUESTO", New InteresCompuesto()}}
@@ -16,10 +17,16 @@ Public Class MotorPrestamos
         If c Is Nothing OrElse c.Monto < 0.01D OrElse c.Monto > 999999999999.99D OrElse Decimal.Round(c.Monto, 2) <> c.Monto Then Throw New ArgumentException("Monto inválido.")
         If c.CantidadCuotas < 1 OrElse c.CantidadCuotas > 1200 OrElse c.TasaAnual < 0 OrElse c.TasaAnual > 100 OrElse c.PeriodosAnuales <= 0 OrElse c.CapitalizacionesAnuales <= 0 OrElse c.Intervalo < 1 OrElse Not {"MESES", "DIAS"}.Contains(c.Unidad) Then Throw New ArgumentException("Revise tasa, cuotas y periodicidad.")
         If c.TipoTasa <> "NOMINAL_ANUAL" AndAlso c.TipoTasa <> "EFECTIVA_ANUAL" Then Throw New ArgumentException("Tipo de tasa inválido.")
-        If c.Metodo Is Nothing OrElse Not metodos.ContainsKey(c.Metodo) Then Throw New ArgumentException("Método de cálculo no implementado.")
+        Dim metodo As IMetodoCalculoPrestamo = Nothing
+        If Not String.IsNullOrWhiteSpace(c.Metodo) AndAlso metodos.ContainsKey(c.Metodo) Then
+            metodo = metodos(c.Metodo)
+        ElseIf Not String.IsNullOrWhiteSpace(c.ExprCapital) OrElse Not String.IsNullOrWhiteSpace(c.ExprInteres) Then
+            metodo = New MetodoExpresion(c)
+        End If
+        If metodo Is Nothing Then Throw New ArgumentException("Método de cálculo no implementado.")
         Dim r = CDbl(c.TasaAnual / 100D)
         Dim i = If(c.TipoTasa = "EFECTIVA_ANUAL", Math.Pow(1 + r, 1 / CDbl(c.PeriodosAnuales)) - 1, Math.Pow(1 + r / CDbl(c.CapitalizacionesAnuales), CDbl(c.CapitalizacionesAnuales / c.PeriodosAnuales)) - 1)
-        Dim plan = metodos(c.Metodo).Generar(c, CDec(i))
+        Dim plan = metodo.Generar(c, CDec(i))
         If plan.Count <> c.CantidadCuotas OrElse plan.Last().Saldo <> 0 OrElse plan.Sum(Function(q) q.Capital) <> c.Monto OrElse plan.Any(Function(q) q.Capital < 0 OrElse q.Interes < 0 OrElse q.Cuota > 999999999999.99D) Then Throw New ArgumentException("Las condiciones exceden los límites del calendario.")
         For n As Integer = 0 To plan.Count - 1
             plan(n).Numero = n + 1

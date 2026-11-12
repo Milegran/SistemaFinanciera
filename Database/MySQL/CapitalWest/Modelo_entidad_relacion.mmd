@@ -39,6 +39,9 @@ erDiagram
     }
     metodoscalculo {
         int_11_ Id PK
+        varchar_2000_ ExprInteres
+        varchar_2000_ ExprCapital
+        varchar_2000_ ExprSaldo
     }
     movimientosprestamo {
         bigint_20_ Id PK
@@ -128,6 +131,7 @@ erDiagram
     estadosciviles ||--o{ clientes : relaciona
     formaspago ||--o{ pagos : relaciona
     metodoscalculo ||--o{ productometodos : relaciona
+    metodoscalculo }o--|| metodoscalculo : estrategia
     movimientosprestamo |o--o{ movimientosprestamo : relaciona
     pagos ||--o{ aplicacionespago : relaciona
     pagos |o--o{ movimientosprestamo : relaciona

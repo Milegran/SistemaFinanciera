@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Data;
+using System.Collections.Generic;
 using MySqlConnector;
 using SistemaFinanciera.Entities;
 using SistemaFinanciera.DAL;
@@ -8,6 +9,13 @@ using SistemaFinanciera.BL;
 
 public class FinanzasTests : MarshalByRefObject {
     static int casos;
+    static readonly Dictionary<string,string[]> Dorados=new Dictionary<string,string[]>{
+        {"FRANCES",new[]{"cuota = if(i=0, P/n, P*i/(1-(1+i)^(-n)))","round(saldo*i)","if(k=n, saldo, min(saldo, round(cuota - interes)))",""}},
+        {"ALEMAN",new[]{"","round(saldo*i)","if(k=n, saldo, min(saldo, round(P/n)))",""}},
+        {"AMERICANO",new[]{"","round(P*i)","if(k=n, P, 0)",""}},
+        {"SIMPLE",new[]{"total = round(P*r/100*n/f)","if(k=n, total - interes_acum, min(total - interes_acum, round(total/n)))","if(k=n, saldo, min(saldo, round(P/n)))",""}},
+        {"COMPUESTO",new[]{"acumulado = round(P*pow(1+i,k))","if(k=n, acumulado - P, 0)","if(k=n, P, 0)","if(k=n, 0, acumulado)"}}
+    };
     static void Check(bool ok, string nombre) { if(!ok) throw new Exception("FALLO: "+nombre); casos++; Console.WriteLine("OK: "+nombre); }
     static void Rechaza(Action accion,string nombre) { try { accion(); } catch(ArgumentException) { Check(true,nombre);return; } catch(InvalidOperationException) { Check(true,nombre);return; } catch(UnauthorizedAccessException) { Check(true,nombre);return; } throw new Exception("No rechazo: "+nombre); }
     static CondicionesPrestamo Condicion(string metodo) { return new CondicionesPrestamo {Monto=1000m,TasaAnual=12m,TipoTasa="NOMINAL_ANUAL",CapitalizacionesAnuales=12m,PeriodosAnuales=12m,Unidad="MESES",Intervalo=1,CantidadCuotas=3,FechaPrimerPago=new DateTime(2027,1,31),Metodo=metodo}; }
@@ -52,6 +60,102 @@ public class FinanzasTests : MarshalByRefObject {
         Check(true,"Referencia de pago numérica sigue siendo válida");
         foreach(var usuario in new[]{"12345", "1admin", "ad min", new string('A',21)})
             Rechaza(()=>servicio.CrearAdministrador(usuario,"Rafael Barrios","admin@example.test","Prueba8!"),"Rechaza usuario inicial: "+usuario);
+        string fDefs="cuota = P/n", fInts="round(saldo*i)", fCaps="min(saldo, cuota)";
+        foreach(var codigo in new[]{"F", "1PRE", "PRE-01", "PRE 01", "__X", new string('A',31)})
+            Rechaza(()=>servicio.CrearMetodoAdministracion(1,codigo,"Metodo de pruebas","Descripcion de pruebas",fDefs,fInts,fCaps,"","","",""),"Rechaza codigo de metodo: "+codigo);
+        Rechaza(()=>servicio.CrearMetodoAdministracion(1,"FRANCES","Reservado","Descripcion de pruebas",fDefs,fInts,fCaps,"","","",""),"Rechaza codigo nativo del motor");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(1,"METODO_OK","","Descripcion de pruebas",fDefs,fInts,fCaps,"","","",""),"Rechaza metodo sin nombre");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(1,"METODO_OK","Metodo","Descripcion de pruebas",fDefs,"",fCaps,"","","",""),"Rechaza sistema sin formula de interes");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(1,"METODO_OK","Metodo","Descripcion de pruebas",fDefs,fInts,"","","","",""),"Rechaza sistema sin formula de capital");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(1,"METODO_OK","Metodo","Descripcion de pruebas","interes = P/n",fInts,fCaps,"","","",""),"Rechaza definicion que sombra una variable reservada");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(1,"CAL_VACIO","Metodo","Descripcion de pruebas","",fInts,"0","","","",""),"La creacion exige un calendario que cierre con 1, 3 y 12 cuotas");
+        var ctx=new Dictionary<string,decimal>(StringComparer.OrdinalIgnoreCase){
+            {"p",1000m},{"i",0.01m},{"r",24m},{"n",12m},{"k",1m},{"saldo",1000m},{"f",12m},{"interes_acum",0m},{"capital_acum",0m}};
+        Check(ExpresionFinanciera.Evaluar("2+3*4",ctx)==14m,"Aritmetica: multiplicacion antes que suma");
+        Check(ExpresionFinanciera.Evaluar("0.1+0.2",ctx)==0.3m,"Decimal exacto sin error de coma flotante");
+        Check(ExpresionFinanciera.Evaluar("2^3^2",ctx)==512m,"Potencia asociativa a la derecha");
+        Check(ExpresionFinanciera.Evaluar("-2^2",ctx)==-4m,"Unario menos con precedencia menor que la potencia");
+        Check(ExpresionFinanciera.Evaluar("2^-1",ctx)==0.5m,"Exponente negativo");
+        Check(ExpresionFinanciera.Evaluar("(1<2)+(3<=3)+(4<>5)+(5>6)",ctx)==3m,"Comparaciones devuelven 1 o 0");
+        Rechaza(()=>ExpresionFinanciera.Evaluar("1<2<3",ctx),"No admite comparaciones encadenadas");
+        Check(ExpresionFinanciera.Evaluar("(1<2) and (3>2)",ctx)==1m,"and logico infijo");
+        Check(ExpresionFinanciera.Evaluar("(1<2) or (3>4)",ctx)==1m,"or logico infijo");
+        Check(ExpresionFinanciera.Evaluar("not(0)",ctx)==1m,"not logico");
+        Check(ExpresionFinanciera.Evaluar("and(1,0)+or(0,1)",ctx)==1m,"and y or como funcion");
+        Check(ExpresionFinanciera.Evaluar("if(1<2,10,20)+if(0,10,20)",ctx)==30m,"if perezoso con tres ramas");
+        Check(ExpresionFinanciera.Evaluar("min(3,5)+max(3,5)+abs(-7)",ctx)==15m,"min max y abs");
+        Check(ExpresionFinanciera.Evaluar("floor(2.7)+ceil(2.1)",ctx)==5m,"floor y ceil");
+        Check(ExpresionFinanciera.Evaluar("pow(2,10)",ctx)==1024m,"pow");
+        Check(ExpresionFinanciera.Evaluar("round(2.345)",ctx)==2.35m,"round aleja del cero");
+        Check(ExpresionFinanciera.Evaluar("round(-2.345)",ctx)==-2.35m,"round negativo aleja del cero");
+        Check(ExpresionFinanciera.Evaluar("10+5 # comentario",ctx)==15m,"Comentario con # hasta fin de linea");
+        Check(ExpresionFinanciera.Evaluar("P*p",ctx)==1000000m,"Los identificadores no distinguen mayusculas");
+        Check(ExpresionFinanciera.Evaluar("round(P*r/100/f)",ctx)==20m,"round con division exacta");
+        Rechaza(()=>ExpresionFinanciera.Evaluar("1/(2-2)",ctx),"Division por cero rechazada en espanol");
+        try { ExpresionFinanciera.Evaluar("1 + 0,5",ctx); throw new Exception("No rechazo la coma decimal"); }
+        catch(ArgumentException ex) { Check(ex.Message.Contains("punto"),"La coma decimal explica usar el punto: "+ex.Message); }
+        Rechaza(()=>ExpresionFinanciera.Evaluar("x+1",ctx),"Variable desconocida sin valor en el contexto");
+        Rechaza(()=>ExpresionFinanciera.Evaluar("2+",ctx),"Expresion incompleta");
+        Rechaza(()=>ExpresionFinanciera.Evaluar("(1+2",ctx),"Parentesis sin cerrar");
+        Rechaza(()=>ExpresionFinanciera.Analizar("  "),"Formula vacia rechazada");
+        Rechaza(()=>ExpresionFinanciera.Analizar("x+1",new HashSet<string>(StringComparer.OrdinalIgnoreCase){"p"}),"Analizar rechaza variable fuera del conjunto permitido");
+        Rechaza(()=>ExpresionFinanciera.Evaluar(new string('1',2001),ctx),"Limite de 2000 caracteres por formula");
+        Rechaza(()=>ExpresionFinanciera.Evaluar(new string('(',31)+"1"+new string(')',31),ctx),"Limite de profundidad 30");
+        Rechaza(()=>ExpresionFinanciera.Evaluar(string.Join("+",Enumerable.Repeat("1",201)),ctx),"Limite de 200 elementos");
+        Rechaza(()=>ExpresionFinanciera.Construir("","","",""),"Rechaza sistema sin formula de interes");
+        Rechaza(()=>ExpresionFinanciera.Construir("","round(saldo*i)","",""),"Rechaza sistema sin formula de capital");
+        var frD=Dorados["FRANCES"];
+        var sistema=ExpresionFinanciera.Construir(frD[0],frD[1],frD[2],frD[3]);
+        Check(sistema.VariablesDefinidas.Length==1 && sistema.VariablesDefinidas[0]=="cuota","El sistema expone sus variables definidas");
+        var q1=sistema.CalcularCuota(Condicion("X"),0.01m,1,1000m,0m,0m);
+        Check(q1.Interes==10m && q1.Capital>0 && q1.Saldo==1000m-q1.Capital,"CalcularCuota replica el interes frances: capital="+q1.Capital);
+        var sinSaldo=ExpresionFinanciera.Construir("","round(saldo*i)","interes","");
+        var q2=sinSaldo.CalcularCuota(Condicion("X"),0.01m,1,1000m,0m,0m);
+        Check(q2.Saldo==990m,"Saldo vacio usa el predeterminado saldo - capital");
+        Rechaza(()=>ExpresionFinanciera.Construir("","capital","saldo",""),"El interes no puede leer el capital");
+        Check(ExpresionFinanciera.Construir("","round(saldo*i)","interes","")!=null,"El capital si puede leer el interes");
+        Rechaza(()=>ExpresionFinanciera.Construir("a = b","round(a)","a",""),"Definicion que depende de otra posterior");
+        Rechaza(()=>ExpresionFinanciera.Construir("a = a + 1","round(a)","a",""),"Definicion circular rechazada");
+        Rechaza(()=>ExpresionFinanciera.Construir("interes = 5","round(saldo*i)","saldo",""),"No sombrea la variable interes");
+        Rechaza(()=>ExpresionFinanciera.Construir("min = 5","round(saldo*i)","saldo",""),"No sombrea una funcion del sistema");
+        Rechaza(()=>ExpresionFinanciera.Construir("9mala = 1","round(saldo*i)","saldo",""),"Nombre de variable invalido");
+        Rechaza(()=>ExpresionFinanciera.Construir("cuota P/n","round(saldo*i)","saldo",""),"Definicion sin signo igual");
+        Rechaza(()=>ExpresionFinanciera.Construir("a=1\na=2","round(a)","a",""),"Variable definida dos veces");
+        var muchas=string.Join("\n",Enumerable.Range(1,31).Select(x=>"v"+x+" = 1"));
+        Rechaza(()=>ExpresionFinanciera.Construir(muchas,"round(saldo*i)","saldo",""),"Limite de 30 definiciones");
+        var negInt=ExpresionFinanciera.Construir("","-saldo","P","");
+        Rechaza(()=>negInt.CalcularCuota(Condicion("X"),0.01m,1,1000m,0m,0m),"Interes negativo rechazado en la cuota");
+        var negCap=ExpresionFinanciera.Construir("","round(saldo*i)","-P","");
+        Rechaza(()=>negCap.CalcularCuota(Condicion("X"),0.01m,1,1000m,0m,0m),"Capital negativo rechazado en la cuota");
+        var vista=servicio.ProbarSistemaExpresiones(frD[0],frD[1],frD[2],frD[3]);
+        Check(vista.Rows.Count==12,"La vista previa entrega 12 cuotas");
+        Check(vista.AsEnumerable().Sum(x=>Convert.ToDecimal(x["Capital"]))==1000m,"La vista previa amortiza el capital");
+        Check(Convert.ToDecimal(vista.Rows[11]["Saldo"])==0m,"La vista previa cierra en cero");
+        Rechaza(()=>servicio.ProbarSistemaExpresiones("","round(saldo*i)","0",""),"La vista previa rechaza un sistema que no amortiza");
+        var motorD=new MotorPrestamos();
+        var fixtures=new object[][]{new object[]{12m,3,1000m},new object[]{0m,12,1000m},new object[]{24m,12,5000m},new object[]{12m,120,0.01m},new object[]{12m,120,10000000m},new object[]{12m,1,1000m}};
+        foreach(var par in Dorados) {
+            foreach(var fx in fixtures) {
+                decimal tasa=(decimal)fx[0]; int n=(int)fx[1]; decimal monto=(decimal)fx[2];
+                var nativa=Condicion(par.Key); nativa.TasaAnual=tasa; nativa.CantidadCuotas=n; nativa.Monto=monto;
+                var expresa=Condicion("EXPR_"+par.Key); expresa.TasaAnual=tasa; expresa.CantidadCuotas=n; expresa.Monto=monto;
+                expresa.Definiciones=par.Value[0]; expresa.ExprInteres=par.Value[1]; expresa.ExprCapital=par.Value[2]; expresa.ExprSaldo=par.Value[3];
+                var pn=motorD.Generar(nativa); var pe=motorD.Generar(expresa);
+                string eti=par.Key+" tasa="+tasa+" n="+n+" monto="+monto;
+                Check(pn.Count==pe.Count && pn.Count==n,"Diferencial "+eti+": misma cantidad de cuotas");
+                bool igual=true; string donde="";
+                for(int idx=0;idx<pn.Count;idx++) {
+                    var a=pn[idx]; var b=pe[idx];
+                    if(a.Numero!=b.Numero||a.Fecha!=b.Fecha||a.Capital!=b.Capital||a.Interes!=b.Interes||a.Cuota!=b.Cuota||a.Saldo!=b.Saldo) {
+                        igual=false;
+                        donde=" en la cuota "+(idx+1)+": nativo capital="+a.Capital+" interes="+a.Interes+" cuota="+a.Cuota+" saldo="+a.Saldo+" | expresion capital="+b.Capital+" interes="+b.Interes+" cuota="+b.Cuota+" saldo="+b.Saldo;
+                        break;
+                    }
+                }
+                Check(igual,"Diferencial "+eti+donde);
+            }
+            Check(true,"Diferencial "+par.Key+": identico al motor nativo en las seis fixtures");
+        }
         Console.WriteLine("CAPTURA: "+casos+" comprobaciones aprobadas; sin acceso a base de datos.");
     }
     public void Run(string conexion) {
@@ -89,7 +193,7 @@ public class FinanzasTests : MarshalByRefObject {
         int consulta=admin+1;
         Sql(conexion,"INSERT INTO Usuarios(NombreUsuario,NombreCompleto,Correo,ContrasenaHash) VALUES('oficial','Oficial','oficial@example.test','sin-acceso'); INSERT INTO UsuarioRoles SELECT LAST_INSERT_ID(),Id FROM Roles WHERE Codigo='OFICIAL_CREDITO'; INSERT INTO Usuarios(NombreUsuario,NombreCompleto,Correo,ContrasenaHash) VALUES('cajero','Cajero','cajero@example.test','sin-acceso'); INSERT INTO UsuarioRoles SELECT LAST_INSERT_ID(),Id FROM Roles WHERE Codigo='CAJERO';");
         int oficial=admin+2,cajero=admin+3;
-        var producto=new ProductoFinanciero {Codigo="TEST",Nombre="Producto de pruebas",Descripcion="Solo pruebas aisladas",MontoMinimo=100m,MontoMaximo=10000m,CuotasMinimas=1,CuotasMaximas=120,MesesMinimos=0.01m,MesesMaximos=120m,TasaAnual=12m,TipoTasa="NOMINAL_ANUAL",CapitalizacionId=1};
+        var producto=new ProductoFinanciero {Codigo="TEST",Nombre="Producto de pruebas",Descripcion="Solo pruebas aisladas",MontoMinimo=100m,MontoMaximo=10000m,CuotasMinimas=1,CuotasMaximas=120,MesesMinimos=1m,MesesMaximos=120m,TasaAnual=12m,TipoTasa="NOMINAL_ANUAL",CapitalizacionId=1};
         producto.Metodos.AddRange(new[]{1,2,3,4,5});producto.Periodicidades.Add(1);
         Rechaza(()=>servicio.GuardarProducto(producto,consulta),"Consulta no puede crear productos");
         Rechaza(()=>servicio.GuardarProducto(producto,cajero),"Cajero no puede configurar productos");
@@ -153,6 +257,37 @@ public class FinanzasTests : MarshalByRefObject {
         var movimientos=servicio.Consultar("MOVIMIENTOS",admin,prestamoId);
         Check((string)movimientos.Rows[0]["Tipo"]=="DESEMBOLSO" && movimientos.AsEnumerable().All(x=>Convert.ToDecimal(x["SaldoAcumulado"])>=0m),"Movimientos ordenados desde desembolso sin saldos negativos");
         Check(Convert.ToDecimal(movimientos.Rows[movimientos.Rows.Count-1]["SaldoAcumulado"])==0m,"Estado de cuenta queda en cero");
+        var metodosAdmin=servicio.MetodosAdministracion(admin);
+        Check(metodosAdmin.AsEnumerable().Count(x=>MotorPrestamos.CodigosNativos.Contains((string)x["Codigo"]))==5,"Los cinco metodos nativos permanecen en el catalogo");
+        Check(metodosAdmin.AsEnumerable().Where(x=>MotorPrestamos.CodigosNativos.Contains((string)x["Codigo"])).All(x=>x.IsNull("ExprInteres")&&x.IsNull("ExprCapital")),"Los metodos nativos no declaran formulas propias");
+        var frD=Dorados["FRANCES"];
+        Rechaza(()=>servicio.CrearMetodoAdministracion(admin,"FRANCES","Duplicado","Descripcion de pruebas",frD[0],frD[1],frD[2],frD[3],"","",""),"Rechaza codigo de metodo ya registrado");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(admin,"NOCIERRA","No cierra","Sistema que no amortiza","","round(saldo*i)","0","","","",""),"La creacion exige un calendario que cierre con 1, 3 y 12 cuotas");
+        int expresionId=servicio.CrearMetodoAdministracion(admin,"FRANCES_PROP","Frances con formulas propias","Sistema frances declarado con formulas propias",frD[0],frD[1],frD[2],frD[3],"C = P*i/(1-(1+i)^(-n))","Amortizacion frances","Igual al frances nativo");
+        Check(expresionId>0,"Alta de metodo con formulas propias");
+        var filaExpr=servicio.MetodosAdministracion(admin).AsEnumerable().First(x=>(string)x["Codigo"]=="FRANCES_PROP");
+        Check((string)filaExpr["ExprInteres"]==frD[1] && (string)filaExpr["ExprCapital"]==frD[2] && Convert.ToBoolean(filaExpr["Activo"]),"El metodo con formulas guarda sus expresiones y nace activo");
+        Rechaza(()=>servicio.CrearMetodoAdministracion(admin,"FRANCES_PROP","Otra vez","Descripcion de pruebas",frD[0],frD[1],frD[2],frD[3],"","",""),"Rechaza codigo duplicado en base de datos");
+        producto.Metodos.Add(expresionId);servicio.GuardarProducto(producto,admin);
+        Check(servicio.Consultar("PRODUCTO_METODOS",admin,productoId).Rows.Count==6,"Asociacion del metodo con formulas al producto");
+        var solicitudExpr=new SolicitudFinanciera {Clave=Guid.NewGuid().ToString("N"),ClienteId=clienteId,ProductoId=productoId,MetodoId=expresionId,PeriodicidadId=1,Monto=1000m,CantidadCuotas=3,FechaPrimerPago=ClienteServicio.HoyPanama.AddMonths(1),Observaciones="Prueba formulas propias"};
+        var solicitudBase=new SolicitudFinanciera {Clave=Guid.NewGuid().ToString("N"),ClienteId=clienteId,ProductoId=productoId,MetodoId=1,PeriodicidadId=1,Monto=1000m,CantidadCuotas=3,FechaPrimerPago=solicitudExpr.FechaPrimerPago,Observaciones="Prueba base"};
+        var planExpr=servicio.Simular(solicitudExpr,admin);
+        var planBase=servicio.Simular(solicitudBase,admin);
+        Check(planExpr.Count==planBase.Count && planExpr.Zip(planBase,(a,b)=>a.Cuota==b.Cuota && a.Capital==b.Capital && a.Interes==b.Interes && a.Saldo==b.Saldo && a.Fecha==b.Fecha).All(x=>x),"Plan del sistema con formulas identico al frances nativo");
+        int solicitudExprId=servicio.CrearSolicitud(solicitudExpr,admin);Check(solicitudExprId>0,"Alta de solicitud con metodo de formulas propias");
+        servicio.Evaluar(solicitudExprId,1,"EN_EVALUACION",0m,"",admin);
+        servicio.Evaluar(solicitudExprId,2,"APROBADO",1000m,"Sistema con formulas en evaluacion",admin);
+        int prestamoExpr=servicio.Formalizar(solicitudExprId,3,solicitudExpr.FechaPrimerPago,admin);
+        var cuotasExpr=servicio.Consultar("CUOTAS",admin,prestamoExpr);
+        Check(cuotasExpr.Rows.Count==3 && cuotasExpr.AsEnumerable().Sum(x=>Convert.ToDecimal(x["Capital"]))==1000m,"Formalizacion con formulas propias calcula el calendario completo");
+        Rechaza(()=>servicio.GuardarMetodoAdministracion(admin,expresionId,"Frances con formulas propias","Edicion que no cierra",frD[0],frD[1],"0",frD[3],"","",""),"La edicion exige formulas que cierren");
+        servicio.GuardarMetodoAdministracion(admin,expresionId,"Frances con formulas propias","Sistema frances documentado",frD[0],frD[1],frD[2],frD[3],"C = P*i/(1-(1+i)^(-n))","Amortizacion frances","Igual al frances nativo");
+        var editado=servicio.MetodosAdministracion(admin).AsEnumerable().First(x=>(string)x["Codigo"]=="FRANCES_PROP");
+        Check((string)editado["Descripcion"]=="Sistema frances documentado" && (string)editado["ExprCapital"]==frD[2],"La edicion guarda ficha y formulas");
+        servicio.GuardarMetodoAdministracion(admin,1,"Frances","Amortizacion frances con cuotas niveladas","borrar formulas","","","","C = P*i/(1-(1+i)^(-n))","Amortizacion nivelada","Igual al ejemplo manual");
+        var nativoFila=servicio.MetodosAdministracion(admin).AsEnumerable().First(x=>(string)x["Codigo"]=="FRANCES");
+        Check((string)nativoFila["Descripcion"]=="Amortizacion frances con cuotas niveladas" && nativoFila.IsNull("ExprInteres"),"La edicion del metodo nativo conserva sus formulas nulas");
         Console.WriteLine("TOTAL: "+casos+" pruebas financieras aprobadas en base aislada.");
     }
 }

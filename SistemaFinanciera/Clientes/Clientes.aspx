@@ -22,7 +22,7 @@
     <div class="table-responsive"><asp:GridView ID="gvClientes" runat="server" AutoGenerateColumns="false" DataKeyNames="Id,Activo,Version" CssClass="table table-hover align-middle" GridLines="None" EmptyDataText="No hay clientes para los filtros seleccionados." AllowPaging="true" PageSize="10" OnRowDataBound="ClienteRowDataBound">
         <Columns>
             <asp:BoundField DataField="Identificacion" HeaderText="Cédula / RUC" />
-            <asp:TemplateField HeaderText="Nombre completo"><ItemTemplate><div class="client-name"><span class="person-avatar"><%#: Iniciales(Eval("NombreCompleto")) %></span><span><strong><%#: Eval("NombreCompleto") %></strong><small><%#: If(CStr(Eval("TipoPersona")) = "NATURAL", "Natural", "Jurídica") %></small></span></div></ItemTemplate></asp:TemplateField>
+            <asp:TemplateField HeaderText="Nombre completo"><ItemTemplate><div class="client-name"><span class='person-avatar <%# AvatarCliente(Eval("Id")) %>'><%#: Iniciales(Eval("NombreCompleto")) %></span><span><strong><%#: Eval("NombreCompleto") %></strong><small><%#: If(CStr(Eval("TipoPersona")) = "NATURAL", "Natural", "Jurídica") %></small></span></div></ItemTemplate></asp:TemplateField>
             <asp:BoundField DataField="Telefono" HeaderText="Teléfono" />
             <asp:BoundField DataField="Provincia" HeaderText="Provincia" />
             <asp:TemplateField HeaderText="Estado"><ItemTemplate><span class='<%# If(CBool(Eval("Activo")), "status-pill", "status-pill inactive") %>'><%#: Eval("Estado") %></span></ItemTemplate></asp:TemplateField>

@@ -126,6 +126,9 @@ Generado desde el esquema importado y validado en MariaDB. PK: clave primaria; U
 | ClaseImplementacion | varchar(200) | YES | NULL | — |
 | Formula | text | YES | NULL | — |
 | Variables | text | YES | NULL | — |
+| ExprInteres | varchar(2000) | YES | NULL | — |
+| ExprCapital | varchar(2000) | YES | NULL | — |
+| ExprSaldo | varchar(2000) | YES | NULL | — |
 | Algoritmo | text | YES | NULL | — |
 | EjemploManual | text | YES | NULL | — |
 | Id | int(11) | NO | — | PRI |

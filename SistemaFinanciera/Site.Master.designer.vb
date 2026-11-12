@@ -15,6 +15,15 @@ Partial Public Class SiteMaster
     Protected WithEvents lnkAdministracion As Global.System.Web.UI.HtmlControls.HtmlAnchor
     Protected WithEvents lnkAjustes As Global.System.Web.UI.HtmlControls.HtmlAnchor
     Protected WithEvents pnlAdminSidebar As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlNotificaciones As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlNotificacionesVacio As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents btnEliminarTodasNotificaciones As Global.System.Web.UI.WebControls.LinkButton
+    Protected WithEvents rptNotificaciones As Global.System.Web.UI.WebControls.Repeater
+    Protected WithEvents litNotificacionesNoLeidas As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litNotificacionesConteo As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents pnlToastNotificacion As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents litToastTitulo As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litToastMensaje As Global.System.Web.UI.WebControls.Literal
 
     Protected WithEvents litUsuarioIniciales As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litUsuarioNombre As Global.System.Web.UI.WebControls.Literal

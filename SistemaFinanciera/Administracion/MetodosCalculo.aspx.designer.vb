@@ -4,6 +4,7 @@ Partial Public Class MetodosCalculoAdmin
     Protected WithEvents pnlMensaje As Global.System.Web.UI.HtmlControls.HtmlGenericControl
     Protected WithEvents mensaje As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents contenidoAdmin As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents btnNuevoMetodo As Global.System.Web.UI.WebControls.Button
     Protected WithEvents grMetodos As Global.System.Web.UI.WebControls.GridView
     Protected WithEvents modalDetalle As Global.System.Web.UI.WebControls.Panel
     Protected WithEvents btnCerrar As Global.System.Web.UI.WebControls.Button
@@ -11,6 +12,12 @@ Partial Public Class MetodosCalculoAdmin
     Protected WithEvents litCodigo As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litDescripcion As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litClase As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litExprInteres As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents pnlExprInteresDetalle As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlExprCapitalDetalle As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlExprSaldoDetalle As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents litExprCapital As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents litExprSaldo As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litFormula As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litVariables As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents litAlgoritmo As Global.System.Web.UI.WebControls.Literal
@@ -22,8 +29,34 @@ Partial Public Class MetodosCalculoAdmin
     Protected WithEvents txtDescripcionMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtFormulaMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtVariablesMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents pnlExprInteresEditar As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents txtExprInteresMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents pnlExprCapitalEditar As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents txtExprCapitalMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents pnlExprSaldoEditar As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents txtExprSaldoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents pnlErrorEditar As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents litErrorEditar As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents txtAlgoritmoMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtEjemploMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents btnCancelarEdicion As Global.System.Web.UI.WebControls.Button
     Protected WithEvents btnGuardarMetodo As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents modalCrearMetodo As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents txtCodigoNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtNombreNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtDescripcionNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtVariablesNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtExprInteresNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtExprCapitalNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtExprSaldoNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtFormulaNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtAlgoritmoNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtEjemploNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents pnlErrorCrear As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents litErrorCrear As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents pnlPreviewCrear As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents litPreviewCrear As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents btnProbarNuevoMetodo As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents btnCancelarCreacion As Global.System.Web.UI.WebControls.Button
+    Protected WithEvents btnGuardarNuevoMetodo As Global.System.Web.UI.WebControls.Button
 End Class
