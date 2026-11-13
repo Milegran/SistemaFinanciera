@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    if (path.includes('/administracion/')) {
+        const adminTopLink = document.querySelector('.cw-topnav .top-link[data-page="Administracion/Usuarios.aspx"]');
+        if (adminTopLink) {
+            adminTopLink.classList.add('active');
+            adminTopLink.setAttribute('aria-current', 'page');
+        }
+    }
     const notificationToggle = document.getElementById('notificationsToggle');
     const notificationPanel = document.getElementById('pnlNotificaciones');
     const notificationClose = document.querySelector('[data-close-notifications]');

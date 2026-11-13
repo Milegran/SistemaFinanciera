@@ -22,6 +22,10 @@ MariaDB confirma DDL implícitamente; los DROP TABLE no se revierten con ROLLBAC
 
 La instalación local del usuario ya se migró y validó el 23 de octubre de 2026. No necesita volver a ejecutar el script de migración.
 
+## Códigos de productos
+
+Para actualizar una base existente, haga un respaldo y ejecute una sola vez `20261112_codigos_productos.sql`. El script normaliza los códigos actuales a `PRO-000001`, usando el Id de cada producto. Las solicitudes, préstamos y asociaciones conservan sus vínculos porque referencian el Id interno. Los productos nuevos reciben el mismo formato al guardarse desde la pantalla.
+
 ## Tablas conservadas
 
 | Área | Tablas |

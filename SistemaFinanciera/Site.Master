@@ -1,4 +1,4 @@
-﻿<%@ Master Language="VB" AutoEventWireup="true" CodeBehind="Site.master.vb" Inherits="SistemaFinanciera.SiteMaster" %>
+<%@ Master Language="VB" AutoEventWireup="true" CodeBehind="Site.master.vb" Inherits="SistemaFinanciera.SiteMaster" %>
 <!DOCTYPE html><html lang="es"><head runat="server">
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title><%: Page.Title %> | CapitalWest</title>
@@ -69,7 +69,7 @@
 </aside>
 <div class="cw-main"><main class="page-content" id="mainContent"><asp:ContentPlaceHolder ID="MainContent" runat="server" /></main>
 <footer class="cw-footer"><span>CapitalWest <span class="footer-dot">·</span> Sistema de gestión financiera</span><span>Moneda Balboas (B/.) <span class="footer-dot">·</span> Panamá</span></footer></div>
-<script src="<%= ResolveUrl("~/Scripts/CapitalWest.js?v=notificaciones-3") %>"></script>
+<script src="<%= ResolveUrl("~/Scripts/CapitalWest.js?v=notificaciones-4") %>"></script>
 <script src="<%= ResolveUrl("~/Scripts/FinanzasFormularios.js?v=6") %>"></script>
 </div></form></body></html>
 

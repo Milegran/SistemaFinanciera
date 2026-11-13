@@ -361,8 +361,8 @@ Public Class FinanzasServicio
     End Sub
     Public Function GuardarProducto(p As ProductoFinanciero, usuarioId As Integer) As Integer
         If p Is Nothing Then Throw New ArgumentException("Producto requerido.")
-        ValidarDatosProducto(p.Codigo, p.Nombre, p.Descripcion)
-        p.Codigo = If(p.Codigo, "").Trim().ToUpperInvariant()
+        ValidarDatosProducto(If(p.Id = 0, "PRO-000001", p.Codigo), p.Nombre, p.Descripcion)
+        p.Codigo = If(p.Id = 0, "", If(p.Codigo, "").Trim().ToUpperInvariant())
         Importe(p.MontoMinimo, "Monto mínimo") : Importe(p.MontoMaximo, "Monto máximo")
         Importe(p.Comision, "Comisión", True) : Importe(p.Gastos, "Gastos", True)
         If p.MontoMaximo < p.MontoMinimo Then Throw New ArgumentException("El monto máximo debe ser mayor o igual al mínimo.")

@@ -1,4 +1,4 @@
-﻿Option Strict On
+Option Strict On
 Imports System.Data
 Imports System.Web
 Imports SistemaFinanciera.Entities
@@ -7,7 +7,6 @@ Public Class Productos
     Private _metodoIds As Dictionary(Of Integer, List(Of Integer))
     Private _metodoNombres As Dictionary(Of Integer, List(Of String))
     Protected Sub Cargar(sender As Object, e As EventArgs) Handles Me.Load
-        codigo.Attributes("data-patron") = SistemaFinanciera.BL.FinanzasServicio.PatronCodigoProducto
         nombre.Attributes("data-patron") = SistemaFinanciera.BL.FinanzasServicio.PatronNombreProducto
         edicion.Visible = Actor.Puede("ADMINISTRADOR")
         pnlAccionCrear.Visible = Actor.Puede("ADMINISTRADOR")
@@ -260,6 +259,7 @@ Public Class Productos
             p.Metodos = metodos.Items.Cast(Of ListItem)().Where(Function(x) x.Selected).Select(Function(x) CInt(x.Value)).ToList()
             p.Periodicidades = ServicioFinanzas.Consultar("PERIODICIDADES_PAGO", Actor.Id).AsEnumerable().Select(Function(x) CInt(x("Id"))).ToList()
             Dim id = ServicioFinanzas.GuardarProducto(p, Actor.Id)
+            codigo.Text = p.Codigo
             ViewState("ProductoId") = id
             CargarListado()
             If ViewState("DetalleProductoId") IsNot Nothing AndAlso CInt(ViewState("DetalleProductoId")) = id Then

@@ -633,10 +633,15 @@ Public Class FinanzasRepositorio
                                If Tabla(cn, tx, "SELECT Id FROM Periodicidades WHERE Id=@p0 AND Activo=1 AND Unidad='MESES' AND Intervalo=1 AND PeriodosPorAnio=12", p.CapitalizacionId).Rows.Count <> 1 Then Throw New ArgumentException("La capitalización debe ser mensual.")
                                Dim id = p.Id
                                If id = 0 Then
-                                   id = Insertar(cn, tx, "INSERT INTO ProductosFinancieros(Codigo,Nombre,Descripcion,MontoMinimo,MontoMaximo,PlazoMinimo,PlazoMaximo,PlazoMinimoMeses,PlazoMaximoMeses,ValorComision,ValorGastos,Activo) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11)", p.Codigo, p.Nombre, p.Descripcion, p.MontoMinimo, p.MontoMaximo, p.CuotasMinimas, p.CuotasMaximas, p.MesesMinimos, p.MesesMaximos, p.Comision, p.Gastos, p.Activo)
+                                   Dim codigoTemporal = "TMP-" & Guid.NewGuid().ToString("N").Substring(0, 26)
+                                   id = Insertar(cn, tx, "INSERT INTO ProductosFinancieros(Codigo,Nombre,Descripcion,MontoMinimo,MontoMaximo,PlazoMinimo,PlazoMaximo,PlazoMinimoMeses,PlazoMaximoMeses,ValorComision,ValorGastos,Activo) VALUES(@p0,@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11)", codigoTemporal, p.Nombre, p.Descripcion, p.MontoMinimo, p.MontoMaximo, p.CuotasMinimas, p.CuotasMaximas, p.MesesMinimos, p.MesesMaximos, p.Comision, p.Gastos, p.Activo)
+                                   p.Codigo = "PRO-" & id.ToString("D6", Globalization.CultureInfo.InvariantCulture)
+                                   Escribir(cn, tx, "UPDATE ProductosFinancieros SET Codigo=@p1 WHERE Id=@p0", id, p.Codigo)
                                Else
-                                   If Tabla(cn, tx, "SELECT Id FROM ProductosFinancieros WHERE Id=@p0 FOR UPDATE", id).Rows.Count = 0 Then Throw New ArgumentException("Producto inexistente.")
-                                   Escribir(cn, tx, "UPDATE ProductosFinancieros SET Codigo=@p1,Nombre=@p2,Descripcion=@p3,MontoMinimo=@p4,MontoMaximo=@p5,PlazoMinimo=@p6,PlazoMaximo=@p7,PlazoMinimoMeses=@p8,PlazoMaximoMeses=@p9,TipoComision='FIJO',TipoGastos='FIJO',ValorComision=@p10,ValorGastos=@p11,Activo=@p12 WHERE Id=@p0", id, p.Codigo, p.Nombre, p.Descripcion, p.MontoMinimo, p.MontoMaximo, p.CuotasMinimas, p.CuotasMaximas, p.MesesMinimos, p.MesesMaximos, p.Comision, p.Gastos, p.Activo)
+                                   Dim productoActual = Tabla(cn, tx, "SELECT Codigo FROM ProductosFinancieros WHERE Id=@p0 FOR UPDATE", id)
+                                   If productoActual.Rows.Count = 0 Then Throw New ArgumentException("Producto inexistente.")
+                                   p.Codigo = CStr(productoActual.Rows(0)("Codigo"))
+                                   Escribir(cn, tx, "UPDATE ProductosFinancieros SET Nombre=@p1,Descripcion=@p2,MontoMinimo=@p3,MontoMaximo=@p4,PlazoMinimo=@p5,PlazoMaximo=@p6,PlazoMinimoMeses=@p7,PlazoMaximoMeses=@p8,TipoComision='FIJO',TipoGastos='FIJO',ValorComision=@p9,ValorGastos=@p10,Activo=@p11 WHERE Id=@p0", id, p.Nombre, p.Descripcion, p.MontoMinimo, p.MontoMaximo, p.CuotasMinimas, p.CuotasMaximas, p.MesesMinimos, p.MesesMaximos, p.Comision, p.Gastos, p.Activo)
                                End If
                                CalcularComision(p.TipoComision, p.Comision, p.MontoMinimo)
                                Escribir(cn, tx, "UPDATE ProductosFinancieros SET TipoComision=@p1 WHERE Id=@p0", id, p.TipoComision)
