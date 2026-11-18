@@ -44,13 +44,50 @@
             </footer>
         </asp:Panel>
     </div>
+    <div id="facturaImpresion" aria-hidden="true"><asp:Literal ID="documentoFactura" runat="server" Mode="PassThrough" /></div>
     <script>
         (() => {
             const button = document.querySelector('[data-imprimir-factura-plana]');
             if (!button) return;
+            // El documento formal (#facturaImpresion) es lo único que se imprime.
             button.addEventListener('click', () => window.print());
-            window.addEventListener('beforeprint', () => document.body.classList.add('imprimir-factura-plana'));
-            window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-factura-plana'));
         })();
     </script>
+</asp:Content>
+<asp:Content ID="Head" ContentPlaceHolderID="HeadContent" runat="server">
+<style>
+#facturaImpresion{display:none}
+@media print{
+ /* Margen 0 quita la fecha y el título que agrega el navegador; el documento trae su propio margen. */
+ @page{size:letter portrait;margin:0}
+ body *{visibility:hidden!important}
+ #facturaImpresion,#facturaImpresion *{visibility:visible!important}
+ #facturaImpresion{display:block!important;position:absolute;left:0;top:0;width:100%;background:#fff}
+ .fac-doc{box-sizing:border-box;width:100%;padding:16mm 18mm;font:10.5pt Arial,Helvetica,sans-serif;color:#1c2a3d}
+ .fac-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+ .fac-head img{height:48px}
+ .fac-head h1{margin:0;color:#1c2a3d;font-size:15pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+ .fac-head p{margin:3px 0 0;text-align:right;color:#0d7a48;font-size:9pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+ .fac-parties{display:flex;justify-content:space-between;gap:24px;padding-bottom:12px;border-bottom:1px solid #d3e0d8}
+ .fac-parties>div{flex:1}.fac-parties .fac-right{text-align:right}
+ .fac-label{display:block;margin-bottom:4px;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+ .fac-parties strong{display:block;margin-bottom:4px;color:#0d7a48;font-size:14pt;font-weight:600}
+ .fac-parties p{margin:1px 0;font-size:9.5pt}
+ .fac-section{margin-top:16px;break-inside:avoid}
+ .fac-section h2{margin:0 0 6px;padding:5px 8px;background:#0d7a48!important;color:#fff!important;font-size:9.5pt;text-transform:uppercase;letter-spacing:.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .fac-table{width:100%;border-collapse:collapse;font-size:10pt}
+ .fac-table th{padding:6px 8px;background:#e6f2eb!important;color:#0d5c37;border:1px solid #d3e0d8;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .fac-table td{padding:7px 8px;border-bottom:1px solid #e8efea}
+ .fac-table .num{text-align:right;white-space:nowrap}
+ .fac-table tfoot td{font-weight:700;font-size:11pt;color:#0d5c37;background:#e6f2eb!important;border-top:1px solid #c5dccd;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .fac-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .fac-summary div{padding:8px 10px;border:1px solid #d3e0d8;background:#f6faf8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .fac-summary div.is-key{background:#e6f2eb!important}
+ .fac-summary span{display:block;font-size:7.5pt;color:#6b7a8c;text-transform:uppercase;font-weight:700}
+ .fac-summary strong{font-size:13pt}.fac-summary .is-key strong{color:#0d7a48}
+ .fac-signs{display:flex;justify-content:space-around;margin-top:56px;break-inside:avoid}
+ .fac-signs div{width:38%;text-align:center;font-size:9pt;color:#6b7a8c}.fac-signs span{display:block;margin-bottom:4px;border-top:1px solid #1c2a3d}
+ .fac-foot{margin-top:22px;padding-top:6px;border-top:1px solid #d3e0d8;font-size:8pt;color:#6b7a8c}
+}
+</style>
 </asp:Content>

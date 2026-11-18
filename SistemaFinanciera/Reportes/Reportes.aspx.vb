@@ -416,28 +416,67 @@ Public Class Reportes
             Response.Flush() : Response.SuppressContent=True : Context.ApplicationInstance.CompleteRequest()
         End Sub)
     End Sub
+    ''' <summary>
+    ''' Imprime el reporte en la misma página con el formato formal de la cotización del simulador:
+    ''' logo y título, bloque "Reporte / Empresa", resumen, gráfica y tabla completa.
+    ''' </summary>
     Protected Sub ImprimirClick(sender As Object,e As EventArgs) Handles imprimir.Click
         Ejecutar(Sub()
             Dim datos=Consultar(Filtros)
-            ConfigurarGrafica(Integer.Parse(Filtros(0)),datos)
-            Dim html As New StringBuilder("<!doctype html><html lang='es'><head><meta charset='utf-8'><title>CapitalWest · Reporte</title><style>body{font:12px Arial;color:#15382c;margin:25px}h1{font-size:22px}h2{font-size:16px;margin:18px 0 8px}table{border-collapse:collapse;width:100%;font-size:10px}td,th{border-bottom:1px solid #ddd;padding:7px;text-align:left}th{background:#edf7f1}thead{display:table-header-group}tr{break-inside:avoid}.report-bars{display:table;width:100%;margin:12px 0 22px}.report-bar-row{display:table-row}.report-bar-label,.report-bar-track,.report-bar-value{display:table-cell;padding:5px 8px;vertical-align:middle}.report-bar-label{width:24%}.report-bar-track{width:60%;background:#eef3f1}.report-bar-fill{height:9px;background:#0d7a48}.report-bar-value{text-align:right;color:#087c49;font-weight:bold}.report-line-chart{width:100%;height:220px}.report-line-chart .chart-grid{stroke:#ddd;stroke-width:1}.report-line-chart .chart-area{fill:#e5f4ec}.report-line-chart .chart-line{fill:none;stroke:#0d7a48;stroke-width:3}.report-line-chart .chart-point{fill:white;stroke:#0d7a48;stroke-width:2}.report-line-chart text{font:10px Arial;fill:#667}.button{padding:10px 20px;margin-bottom:15px}@media print{.button{display:none}@page{size:landscape;margin:12mm}}</style></head><body><button class='button' onclick='window.print()'>Imprimir / Guardar PDF</button><h1>CapitalWest · ")
-            html.Append(Server.HtmlEncode(Nombres(Integer.Parse(Filtros(0))-1)) & "</h1><p>" & Server.HtmlEncode(filtrosAplicados.Text) & "</p><p>" & Server.HtmlEncode(CStr(ViewState("DescripcionAplicada"))) & "</p><p>Generado: " & DateTime.UtcNow.AddHours(-5).ToString("dd/MM/yyyy HH:mm") & " · Panamá · Importes en B/. · " & datos.Rows.Count & " registros</p><h2>Resumen gráfico</h2>" & graficaReporte.Text & "<h2>Detalle del reporte</h2><table><thead><tr>")
-            Dim columnas=datos.Columns.Cast(Of DataColumn)().Where(Function(col) col.ColumnName<>"PagoId").ToList()
-            For Each col As DataColumn In columnas
-                html.Append("<th>" & Server.HtmlEncode(col.ColumnName) & "</th>")
-            Next
-            html.Append("</tr></thead><tbody>")
-            For Each fila As DataRow In datos.Rows
-                html.Append("<tr>")
-                For Each col As DataColumn In columnas
-                    Dim valor=fila(col)
-                    html.Append("<td>" & Server.HtmlEncode(TextoCelda(valor)) & "</td>")
-                Next
-                html.Append("</tr>")
-            Next
-            html.Append("</tbody></table></body></html>")
-            Response.Clear() : Response.ContentType="text/html" : Response.ContentEncoding=Encoding.UTF8
-            Response.Write(html.ToString()) : Response.Flush() : Response.SuppressContent=True : Context.ApplicationInstance.CompleteRequest()
+            Mostrar(datos)
+            documentoReporte.Text=DocumentoImpresion(datos)
+            ClientScript.RegisterStartupScript(Me.GetType(),"imprimirReporte","window.addEventListener('load',function(){setTimeout(function(){window.print();},250);});",True)
         End Sub)
     End Sub
+
+    Private Function DocumentoImpresion(datos As DataTable) As String
+        Dim e=Function(t As String) Server.HtmlEncode(If(t,""))
+        Dim cultura=CultureInfo.GetCultureInfo("es-PA")
+        Dim nombre=Nombres(Integer.Parse(Filtros(0))-1)
+        Dim generado=DateTime.UtcNow.AddHours(-5).ToString("dd/MM/yyyy HH:mm",CultureInfo.InvariantCulture)
+        Dim rutaLogo=Server.MapPath("~/Content/Images/capitalwest-login.png")
+        Dim logo=If(IO.File.Exists(rutaLogo),"data:image/png;base64," & Convert.ToBase64String(IO.File.ReadAllBytes(rutaLogo)),ResolveUrl("~/Content/Images/capitalwest-login.png"))
+        Dim sb As New StringBuilder()
+        sb.Append("<article class=""cot-doc"">")
+        sb.Append("<header class=""cot-head""><img src=""").Append(e(logo)).Append(""" alt=""CapitalWest"" /><h1>Reporte de ").Append(e(Char.ToLower(nombre(0),cultura) & nombre.Substring(1))).Append("</h1></header>")
+        ' Bloque izquierdo: el reporte y sus filtros. Bloque derecho: la empresa y quién lo generó.
+        sb.Append("<div class=""cot-parties""><div><span class=""cot-label"">Reporte</span><strong>").Append(e(nombre)).Append("</strong>")
+        For Each filtro In filtrosAplicados.Text.Split(New String(){" · "},StringSplitOptions.RemoveEmptyEntries)
+            sb.Append("<p>").Append(e(filtro)).Append("</p>")
+        Next
+        sb.Append("</div><div class=""cot-right""><span class=""cot-label"">Empresa</span><strong>CapitalWest</strong><p>Soluciones financieras</p><p>Generado por: ").Append(e(If(Actor Is Nothing,"",Actor.Nombre))).Append("</p><p>Fecha: ").Append(e(generado)).Append("</p><p>Importes en balboas (B/.)</p></div></div>")
+        sb.Append("<section class=""cot-section""><h2>Resumen</h2><div class=""cot-summary""><div><span>Registros</span><strong>").Append(e(datos.Rows.Count.ToString("N0",cultura))).Append("</strong></div><div class=""is-key""><span>").Append(e(etiquetaTotal.Text)).Append("</span><strong>").Append(e(total.Text)).Append("</strong></div><div><span>Generado en Panamá</span><strong>").Append(e(generado)).Append("</strong></div></div>")
+        Dim desc=CStr(ViewState("DescripcionAplicada"))
+        If Not String.IsNullOrWhiteSpace(desc) Then sb.Append("<p class=""cot-note"" style=""margin-top:6px"">").Append(e(desc)).Append("</p>")
+        sb.Append("</section>")
+        sb.Append("<section class=""cot-section""><h2>").Append(e(If(String.IsNullOrWhiteSpace(tituloGrafica.Text),"Resumen gráfico",tituloGrafica.Text))).Append("</h2>")
+        If Not String.IsNullOrWhiteSpace(subtituloGrafica.Text) Then sb.Append("<p class=""cot-note"">").Append(e(subtituloGrafica.Text)).Append("</p>")
+        sb.Append("<div class=""cot-chart"">").Append(graficaReporte.Text).Append("</div></section>")
+        Dim columnas=datos.Columns.Cast(Of DataColumn)().Where(Function(col) col.ColumnName<>"PagoId").ToList()
+        Dim esNumero=Function(col As DataColumn) col.DataType=GetType(Decimal) OrElse col.DataType=GetType(Integer) OrElse col.DataType=GetType(Long) OrElse col.DataType=GetType(Double)
+        sb.Append("<section class=""cot-section cot-section-tabla""><h2>Detalle del reporte</h2><table class=""cot-table""><thead><tr>")
+        For Each col In columnas
+            sb.Append("<th").Append(If(esNumero(col)," class=""num""","")).Append(">").Append(e(col.ColumnName)).Append("</th>")
+        Next
+        sb.Append("</tr></thead><tbody>")
+        If datos.Rows.Count=0 Then sb.Append("<tr><td colspan=""").Append(columnas.Count).Append(""">No hay registros para los filtros seleccionados.</td></tr>")
+        For Each fila As DataRow In datos.Rows
+            sb.Append("<tr>")
+            For Each col In columnas
+                sb.Append("<td").Append(If(esNumero(col)," class=""num""","")).Append(">").Append(e(TextoImpresion(fila(col),col.ColumnName,cultura))).Append("</td>")
+            Next
+            sb.Append("</tr>")
+        Next
+        sb.Append("</tbody></table></section>")
+        sb.Append("<footer class=""cot-foot"">Reporte generado por CapitalWest con la información registrada a la fecha y hora indicadas. Los importes se expresan en balboas (B/.).</footer></article>")
+        Return sb.ToString()
+    End Function
+
+    Private Shared Function TextoImpresion(valor As Object,columna As String,cultura As CultureInfo) As String
+        If valor Is Nothing OrElse IsDBNull(valor) Then Return ""
+        If TypeOf valor Is DateTime Then Return CDate(valor).ToString("dd/MM/yyyy",CultureInfo.InvariantCulture)
+        If TypeOf valor Is Decimal Then Return CDec(valor).ToString(If(columna="Préstamos","N0","N2"),cultura)
+        If columna="Estado" Then Return EstadoLegible(Convert.ToString(valor,CultureInfo.InvariantCulture))
+        Return Convert.ToString(valor,CultureInfo.InvariantCulture)
+    End Function
 End Class

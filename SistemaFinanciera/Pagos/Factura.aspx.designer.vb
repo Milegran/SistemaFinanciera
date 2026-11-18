@@ -16,4 +16,5 @@ Partial Public Class FacturaPago
     Protected WithEvents reciboMora As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents reciboCargos As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents reciboSaldoCapital As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents documentoFactura As Global.System.Web.UI.WebControls.Literal
 End Class

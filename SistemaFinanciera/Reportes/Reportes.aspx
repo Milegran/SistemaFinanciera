@@ -55,6 +55,40 @@
 @media(max-width:900px){.report-chart-combo{grid-template-columns:1fr}}
 @media(max-width:760px){.reports-filters{grid-template-columns:1fr}.reports-summary{grid-template-columns:1fr}.reports-intro{align-items:flex-start}.reports-intro h1{font-size:30px;letter-spacing:-.8px}.reports-metric strong{font-size:20px}.reports-badge{display:none}.report-bar-row{grid-template-columns:minmax(85px,120px) minmax(55px,1fr) minmax(75px,95px);gap:8px}.reports-chart-card{padding:17px;border-radius:20px}.reports-chart-head h3{font-size:15px}.report-pie-layout{grid-template-columns:minmax(130px,160px) minmax(0,1fr);gap:10px}.report-pie-item{grid-template-columns:8px minmax(0,1fr) auto;gap:6px}.report-pie-panel,.report-bars-panel{padding:13px}}
 </style>
+<style>
+/* Documento del reporte: solo visible al imprimir (mismo formato que la cotización del simulador). */
+#reporteImpresion{display:none}
+@media print{
+ @page{size:letter landscape;margin:12mm}
+ body *{visibility:hidden!important}
+ #reporteImpresion,#reporteImpresion *{visibility:visible!important}
+ #reporteImpresion{display:block!important;position:absolute;left:0;top:0;width:100%;background:#fff}
+ .cot-doc{font:10pt Arial,Helvetica,sans-serif;color:#1c2a3d}
+ .cot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+ .cot-head img{height:46px}
+ .cot-head h1{margin:0;color:#1c2a3d;font-size:14pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+ .cot-parties{display:flex;justify-content:space-between;gap:24px;margin-bottom:6px}
+ .cot-parties>div{flex:1}.cot-parties .cot-right{text-align:right}
+ .cot-label{display:block;margin-bottom:4px;color:#1c2a3d;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+ .cot-parties strong{display:block;margin-bottom:4px;color:#0d7a48;font-size:14pt;font-weight:600}
+ .cot-parties p{margin:1px 0;font-size:9pt;color:#1c2a3d}
+ .cot-section{margin-top:12px;break-inside:avoid}
+ .cot-section.cot-section-tabla{break-inside:auto}.cot-section-tabla h2,.cot-section-tabla .cot-note{break-after:avoid}
+ .cot-section h2{margin:0 0 6px;padding:5px 8px;background:#0d7a48!important;color:#fff!important;font-size:9.5pt;text-transform:uppercase;letter-spacing:.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+ .cot-summary div{padding:6px 8px;border:1px solid #d3e0d8;background:#f6faf8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-summary div.is-key{background:#e6f2eb!important}.cot-summary span{display:block;font-size:7.5pt;color:#6b7a8c;text-transform:uppercase;font-weight:700}.cot-summary strong{font-size:11pt}.cot-summary .is-key strong{color:#0d7a48}
+ .cot-note{margin:0 0 6px;font-size:8.5pt;color:#6b7a8c}
+ .cot-chart{padding:4px 2px}.cot-chart *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-table{width:100%;border-collapse:collapse;font-size:8pt}
+ .cot-table thead{display:table-header-group}.cot-table tfoot{display:table-row-group}.cot-table tr{break-inside:avoid}
+ .cot-table th{background:#e6f2eb!important;color:#0d5c37;padding:5px 4px;border:1px solid #d3e0d8;text-align:left;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-table td{padding:4px;border-bottom:1px solid #e8efea;text-align:left;vertical-align:top}
+ .cot-table th.num,.cot-table td.num{text-align:right;white-space:nowrap}
+ .cot-table tbody tr:nth-child(even) td{background:#f6faf8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-foot{margin-top:16px;padding-top:6px;border-top:1px solid #d3e0d8;font-size:7.5pt;color:#6b7a8c}
+}
+</style>
 </asp:Content>
 <asp:Content ID="Body" ContentPlaceHolderID="MainContent" runat="server">
 <div class="finance-page reports-page">
@@ -72,10 +106,11 @@
  <asp:Panel ID="resultados" runat="server" Visible="false">
   <div class="reports-summary"><div class="reports-metric"><small>Registros del resultado</small><strong><asp:Literal ID="cantidad" runat="server" Mode="Encode" /></strong></div><div class="reports-metric"><small><asp:Literal ID="etiquetaTotal" runat="server" Mode="Encode" /></small><strong><asp:Literal ID="total" runat="server" Mode="Encode" /></strong></div><div class="reports-metric"><small>Generado en Panamá</small><strong style="font-size:17px"><asp:Literal ID="fechaGenerado" runat="server" Mode="Encode" /></strong></div></div>
   <section class="reports-chart-card" aria-label="Gráfica del reporte"><div class="reports-chart-head"><div><h3><asp:Literal ID="tituloGrafica" runat="server" Mode="Encode" /></h3><p><asp:Literal ID="subtituloGrafica" runat="server" Mode="Encode" /></p></div><span class="reports-chart-mark">Visualización del reporte</span></div><asp:Literal ID="graficaReporte" runat="server" Mode="PassThrough" /></section>
-  <section class="cw-card reports-results"><div class="reports-result-header"><div><h2><asp:Literal ID="titulo" runat="server" Mode="Encode" /></h2><p><asp:Literal ID="filtrosAplicados" runat="server" Mode="Encode" /></p></div><div class="reports-actions" style="margin-top:0"><asp:Button ID="exportar" runat="server" Text="CSV / Excel" CssClass="btn btn-outline-primary" /><asp:Button ID="imprimir" runat="server" Text="Imprimir / PDF" CssClass="btn btn-light" formtarget="_blank" /></div></div>
+  <section class="cw-card reports-results"><div class="reports-result-header"><div><h2><asp:Literal ID="titulo" runat="server" Mode="Encode" /></h2><p><asp:Literal ID="filtrosAplicados" runat="server" Mode="Encode" /></p></div><div class="reports-actions" style="margin-top:0"><asp:Button ID="exportar" runat="server" Text="CSV / Excel" CssClass="btn btn-outline-primary" /><asp:Button ID="imprimir" runat="server" Text="Imprimir / PDF" CssClass="btn btn-light" /></div></div>
    <div class="table-responsive"><asp:GridView ID="tabla" runat="server" AutoGenerateColumns="false" AllowPaging="true" PageSize="12" EnableViewState="false" CssClass="table table-hover reports-table simulator-table" GridLines="None" EmptyDataText="No hay registros para los filtros seleccionados." /></div>
    <p class="reports-caption"><asp:Literal ID="conteo" runat="server" Mode="Encode" /></p><p class="reports-caption">Los importes se expresan en balboas (B/.) y la tabla, descarga e impresión conservan el resultado completo.</p>
   </section>
  </asp:Panel>
+ <div id="reporteImpresion" aria-hidden="true"><asp:Literal ID="documentoReporte" runat="server" Mode="PassThrough" /></div>
 </div>
 </asp:Content>

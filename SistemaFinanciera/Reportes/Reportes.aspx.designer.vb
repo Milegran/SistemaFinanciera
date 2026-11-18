@@ -5,6 +5,7 @@ Partial Public Class Reportes
     Protected WithEvents tituloGrafica As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents subtituloGrafica As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents graficaReporte As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents documentoReporte As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents reporte As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents desde As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents hasta As Global.System.Web.UI.WebControls.TextBox
