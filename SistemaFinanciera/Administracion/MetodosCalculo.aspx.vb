@@ -125,6 +125,11 @@ Public Class MetodosCalculoAdmin
             txtExprSaldoNuevoMetodo.Text=""
             txtAlgoritmoNuevoMetodo.Text=""
             txtEjemploNuevoMetodo.Text=""
+            hfModoNuevoMetodo.Value="OPCIONES"
+            rblFormaCapital.SelectedValue=MetodoPorOpciones.CuotaFija
+            ddlBaseInteres.SelectedValue=MetodoPorOpciones.BaseSaldo
+            ddlPagoInteres.SelectedValue=MetodoPorOpciones.PagoCadaCuota
+            txtGraciaNuevo.Text="0" : txtGloboNuevo.Text="0" : txtCrecimientoNuevo.Text="0"
             pnlErrorCrear.Visible=False : litErrorCrear.Text=""
             pnlPreviewCrear.Visible=False : litPreviewCrear.Text=""
             btnProbarNuevoMetodo.Attributes("formnovalidate")="formnovalidate"
@@ -138,8 +143,16 @@ Public Class MetodosCalculoAdmin
 
     Protected Sub ProbarSistema(sender As Object,e As EventArgs) Handles btnProbarNuevoMetodo.Click
         Try
-            Dim vista=ServicioFinanzas.ProbarSistemaExpresiones(txtVariablesNuevoMetodo.Text,txtExprInteresNuevoMetodo.Text,txtExprCapitalNuevoMetodo.Text,txtExprSaldoNuevoMetodo.Text)
-            litPreviewCrear.Text="<span class=""preview-caption"">Vista previa: calendario de prueba de 12 cuotas con monto de B/. 1,000.00 y tasa anual 24% (nominal).</span>" & CalendarioHtml(vista)
+            Dim vista As DataTable
+            Dim titulo="Vista previa: calendario de prueba de 12 cuotas con monto de B/. 1,000.00 y tasa anual 24% (nominal)."
+            If ModoOpciones() Then
+                Dim gen=MetodoPorOpciones.Generar(LeerOpciones())
+                vista=ServicioFinanzas.ProbarSistemaExpresiones(gen.Variables,gen.ExprInteres,gen.ExprCapital,gen.ExprSaldo)
+                titulo &= " " & gen.Descripcion
+            Else
+                vista=ServicioFinanzas.ProbarSistemaExpresiones(txtVariablesNuevoMetodo.Text,txtExprInteresNuevoMetodo.Text,txtExprCapitalNuevoMetodo.Text,txtExprSaldoNuevoMetodo.Text)
+            End If
+            litPreviewCrear.Text="<span class=""preview-caption"">" & HttpUtility.HtmlEncode(titulo) & "</span>" & CalendarioHtml(vista)
             pnlPreviewCrear.Visible=True
             pnlErrorCrear.Visible=False : litErrorCrear.Text=""
         Catch ex As Exception When TypeOf ex Is ArgumentException OrElse TypeOf ex Is InvalidOperationException OrElse TypeOf ex Is UnauthorizedAccessException
@@ -153,7 +166,14 @@ Public Class MetodosCalculoAdmin
 
     Protected Sub GuardarNuevoMetodo(sender As Object,e As EventArgs) Handles btnGuardarNuevoMetodo.Click
         Try
-            Dim id=ServicioFinanzas.CrearMetodoAdministracion(Actor.Id,txtCodigoNuevoMetodo.Text,txtNombreNuevoMetodo.Text,txtDescripcionNuevoMetodo.Text,txtVariablesNuevoMetodo.Text,txtExprInteresNuevoMetodo.Text,txtExprCapitalNuevoMetodo.Text,txtExprSaldoNuevoMetodo.Text,txtFormulaNuevoMetodo.Text,txtAlgoritmoNuevoMetodo.Text,txtEjemploNuevoMetodo.Text)
+            If ModoOpciones() Then
+                ' Las opciones se convierten en fórmulas y se guardan por el mismo camino que "Con fórmulas".
+                Dim gen=MetodoPorOpciones.Generar(LeerOpciones())
+                Dim descripcion=If(String.IsNullOrWhiteSpace(txtDescripcionNuevoMetodo.Text),gen.Descripcion,txtDescripcionNuevoMetodo.Text)
+                ServicioFinanzas.CrearMetodoAdministracion(Actor.Id,txtCodigoNuevoMetodo.Text,txtNombreNuevoMetodo.Text,descripcion,gen.Variables,gen.ExprInteres,gen.ExprCapital,gen.ExprSaldo,gen.Formula,gen.Algoritmo,"")
+            Else
+                ServicioFinanzas.CrearMetodoAdministracion(Actor.Id,txtCodigoNuevoMetodo.Text,txtNombreNuevoMetodo.Text,txtDescripcionNuevoMetodo.Text,txtVariablesNuevoMetodo.Text,txtExprInteresNuevoMetodo.Text,txtExprCapitalNuevoMetodo.Text,txtExprSaldoNuevoMetodo.Text,txtFormulaNuevoMetodo.Text,txtAlgoritmoNuevoMetodo.Text,txtEjemploNuevoMetodo.Text)
+            End If
             modalCrearMetodo.Visible=False
             CargarMetodos()
             Notificar("Método de cálculo creado. Asócialo a un producto para usarlo en simulador y solicitudes.")
@@ -164,6 +184,29 @@ Public Class MetodosCalculoAdmin
             MostrarErrorCrear("No se pudo crear el método. Compruebe la conexión o contacte al administrador.")
         End Try
     End Sub
+
+    Private Function ModoOpciones() As Boolean
+        Return Not String.Equals(hfModoNuevoMetodo.Value,"FORMULAS",StringComparison.Ordinal)
+    End Function
+
+    Private Function LeerOpciones() As OpcionesMetodo
+        Return New OpcionesMetodo With {
+            .FormaCapital=rblFormaCapital.SelectedValue,
+            .BaseInteres=ddlBaseInteres.SelectedValue,
+            .PagoInteres=ddlPagoInteres.SelectedValue,
+            .CuotasGracia=CInt(LeerNumero(txtGraciaNuevo.Text,"Cuotas de gracia",True)),
+            .PorcentajeGlobo=LeerNumero(txtGloboNuevo.Text,"% cuota globo",False),
+            .PorcentajeCrecimiento=LeerNumero(txtCrecimientoNuevo.Text,"% crecimiento",False)}
+    End Function
+
+    Private Shared Function LeerNumero(texto As String,campo As String,entero As Boolean) As Decimal
+        If String.IsNullOrWhiteSpace(texto) Then Return 0D
+        Dim valor As Decimal
+        If Not Decimal.TryParse(texto.Trim().Replace(","c,"."c),NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture,valor) OrElse valor>1000D OrElse (entero AndAlso valor<>Decimal.Truncate(valor)) Then
+            Throw New ArgumentException(campo & ": escriba " & If(entero,"un número entero.","un número (use punto decimal)."))
+        End If
+        Return valor
+    End Function
 
     Private Sub MostrarErrorCrear(mensaje As String)
         litErrorCrear.Text=mensaje

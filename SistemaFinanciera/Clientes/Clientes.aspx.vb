@@ -47,6 +47,12 @@ Public Class Clientes
         txtFechaNacimiento.Attributes("max") = ClienteServicio.HoyPanama.ToString("yyyy-MM-dd")
         pnlMensaje.Visible = False
         pnlErrorFormulario.Visible = False
+        ' Solo administrador y oficial de crédito gestionan clientes; el rol Consulta solo ve.
+        Dim gestiona = AccesoPantallas.GestionaClientes(Actor)
+        btnNuevoCliente.Visible = gestiona
+        btnEditarPerfil.Visible = gestiona
+        btnCambiarEstadoPerfil.Visible = gestiona
+        lnkNuevaSolicitud.Visible = gestiona
         If IsPostBack AndAlso pnlFormularioCliente.Visible AndAlso ClienteId > 0 Then
             Dim clienteActual = Servicio.Obtener(ClienteId)
             If clienteActual.TipoPersona = "NATURAL" AndAlso Not String.IsNullOrWhiteSpace(clienteActual.EstadoCivil) AndAlso ddlEstadoCivil.Items.FindByValue(clienteActual.EstadoCivil) Is Nothing Then
@@ -63,6 +69,9 @@ Public Class Clientes
                          CargarListado()
                      End Sub)
         End If
+    End Sub
+    Private Sub ExigirGestion()
+        If Not AccesoPantallas.GestionaClientes(Actor) Then Throw New InvalidOperationException("Tu rol solo permite consultar clientes.")
     End Sub
     Private Sub EjecutarCliente(operacion As Action)
         Try
@@ -211,7 +220,10 @@ Public Class Clientes
         ActualizarTipoPersona()
     End Sub
     Protected Sub NuevoCliente(sender As Object, e As EventArgs) Handles btnNuevoCliente.Click
-        EjecutarCliente(Sub() MostrarFormulario(New Cliente With {.TipoPersona = "NATURAL", .TipoIdentificacion = "CEDULA"}))
+        EjecutarCliente(Sub()
+                     ExigirGestion()
+                     MostrarFormulario(New Cliente With {.TipoPersona = "NATURAL", .TipoIdentificacion = "CEDULA"})
+                 End Sub)
     End Sub
     Protected Sub Cancelar(sender As Object, e As EventArgs) Handles btnCancelar.Click
         ClienteId = 0
@@ -222,6 +234,7 @@ Public Class Clientes
     End Sub
     Protected Sub Guardar(sender As Object, e As EventArgs) Handles btnGuardarCliente.Click
         EjecutarCliente(Sub()
+                     ExigirGestion()
                      Dim ingresos As Decimal
                      ' NumberStyles sin separador de miles: 1,50 no puede convertirse accidentalmente en 150.
                      If Not Decimal.TryParse(txtIngresos.Text, NumberStyles.AllowDecimalPoint Or NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, ingresos) Then Throw New ArgumentException("Indique los ingresos con punto decimal, por ejemplo 1250.50.")
@@ -301,6 +314,11 @@ Public Class Clientes
     End Function
     Protected Sub ClienteRowDataBound(sender As Object, e As GridViewRowEventArgs)
         If e.Row.RowType <> DataControlRowType.DataRow Then Return
+        Dim gestiona = AccesoPantallas.GestionaClientes(Actor)
+        For Each accion In {"btnEditar", "btnEstado"}
+            Dim boton = e.Row.FindControl(accion)
+            If boton IsNot Nothing Then boton.Visible = gestiona
+        Next
         Dim ver = TryCast(e.Row.FindControl("btnVer"), LinkButton)
         If ver Is Nothing Then Return
         e.Row.Attributes("data-view-button") = ver.ClientID
@@ -448,10 +466,14 @@ Public Class Clientes
         EjecutarCliente(Sub() CargarListado())
     End Sub
     Protected Sub EditarPerfil(sender As Object, e As EventArgs) Handles btnEditarPerfil.Click
-        EjecutarCliente(Sub() MostrarFormulario(Servicio.Obtener(CInt(ViewState("PerfilId")))))
+        EjecutarCliente(Sub()
+                     ExigirGestion()
+                     MostrarFormulario(Servicio.Obtener(CInt(ViewState("PerfilId"))))
+                 End Sub)
     End Sub
     Protected Sub CambiarEstadoPerfil(sender As Object, e As EventArgs) Handles btnCambiarEstadoPerfil.Click
         EjecutarCliente(Sub()
+                     ExigirGestion()
                      Dim id = CInt(ViewState("PerfilId"))
                      Dim cliente = Servicio.Obtener(id)
                      Servicio.CambiarEstado(id, Not cliente.Activo, cliente.Version)
@@ -500,6 +522,7 @@ Public Class Clientes
                      If Not Integer.TryParse(Convert.ToString(e.CommandArgument), indice) OrElse indice < 0 OrElse indice >= gvClientes.DataKeys.Count Then Throw New ArgumentException("Seleccione un cliente válido.")
                      Dim clave = gvClientes.DataKeys(indice)
                      Dim id = CInt(clave.Values("Id"))
+                     If e.CommandName <> "VerCliente" Then ExigirGestion()
                      If e.CommandName = "VerCliente" Then
                          MostrarPerfil(Servicio.Obtener(id))
                      ElseIf e.CommandName = "EditarCliente" Then

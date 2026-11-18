@@ -44,12 +44,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (notificationToast) {
         const closeToast = notificationToast.querySelector('[data-close-notification-toast]');
+        const progress = notificationToast.querySelector('.cw-toast-progress');
+        let dismissed = false;
         function dismissToast() {
+            if (dismissed) return;
+            dismissed = true;
             notificationToast.classList.add('is-dismissed');
-            window.setTimeout(function () { notificationToast.hidden = true; }, 180);
+            window.setTimeout(function () { notificationToast.hidden = true; }, 200);
         }
         if (closeToast) closeToast.addEventListener('click', dismissToast);
-        window.setTimeout(dismissToast, 6500);
+        document.addEventListener('keydown', function (event) { if (event.key === 'Escape') dismissToast(); });
+        // Se cierra cuando termina la barra de progreso (que se pausa al pasar el ratón o con foco).
+        if (progress && window.getComputedStyle(progress).display !== 'none') {
+            progress.addEventListener('animationend', dismissToast);
+        } else {
+            let remaining = 4500, startedAt = Date.now(), timer = window.setTimeout(dismissToast, remaining);
+            notificationToast.addEventListener('mouseenter', function () { window.clearTimeout(timer); remaining -= Date.now() - startedAt; });
+            notificationToast.addEventListener('mouseleave', function () { startedAt = Date.now(); timer = window.setTimeout(dismissToast, Math.max(remaining, 1000)); });
+        }
     }
 
     const menu = document.getElementById('mobileMenu');

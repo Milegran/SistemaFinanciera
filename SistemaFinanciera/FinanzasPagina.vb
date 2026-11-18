@@ -37,11 +37,20 @@ Public Class FinanzasPagina
                 Response.Redirect("~/Administracion/CambiarClave.aspx", True)
                 Return
             End If
+            ' Acceso por rol: una pantalla no permitida regresa a Inicio con un aviso.
+            If Not AccesoPantallas.Permite(Actor, Request.AppRelativeCurrentExecutionFilePath) Then
+                Response.Redirect("~/Default.aspx?acceso=denegado", True)
+                Return
+            End If
         Catch ex As Exception When TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is ArgumentException
             System.Web.Security.FormsAuthentication.SignOut()
             Response.Redirect("~/Acceso.aspx?expirada=1", True)
         End Try
     End Sub
+    ''' <summary>Para el marcado: muestra un enlace solo si el rol actual puede abrir esa pantalla.</summary>
+    Protected Function PuedeVer(ruta As String) As Boolean
+        Return AccesoPantallas.Permite(Actor, ruta)
+    End Function
     Protected Sub Notificar(texto As String, Optional esError As Boolean = False)
         Dim contenedor = Master.FindControl("MainContent")
         If contenedor Is Nothing Then Return

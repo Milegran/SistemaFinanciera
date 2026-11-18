@@ -46,11 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (key === 'referencia') required = field(scope, 'forma').value !== 'EFECTIVO';
         if (el.validity.badInput) return 'Introduzca un número válido.';
-        if (el.type === 'password' && el.validity.customError) return el.validationMessage;
+        const isPassword = el.type === 'password' || el.dataset.passwordField === '1';
+        if (isPassword && el.validity.customError) return el.validationMessage;
         if (!value) return required ? 'Este campo es obligatorio.' : '';
         if (el.dataset.minPalabras && value.split(/\s+/).length < Number(el.dataset.minPalabras)) return 'Escriba el nombre y al menos un apellido.';
         if (numeric(el) && el.dataset.digitos && raw.replace(/\D/g, '').length > Number(el.dataset.digitos)) return 'Use máximo ' + el.dataset.digitos + ' dígitos numéricos.';
-        if (el.type !== 'password' && forbidden.test(value)) return 'No se admiten estos símbolos o caracteres invisibles.';
+        if (!isPassword && forbidden.test(value)) return 'No se admiten estos símbolos o caracteres invisibles.';
         if (el.maxLength > 0 && raw.length > el.maxLength) return 'Máximo ' + el.maxLength + ' caracteres.';
         if (el.minLength > 0 && raw.length < el.minLength) return 'Mínimo ' + el.minLength + ' caracteres.';
         if (el.dataset.regla === 'nombre-persona' && !new RegExp(el.dataset.patronNombre, 'u').test(value)) return 'Use letras, acentos, espacios, apóstrofos, puntos o guiones; no números.';
@@ -124,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const start = el.selectionStart, end = el.selectionEnd;
                 const proposed = start === null ? text : el.value.slice(0, start) + text + el.value.slice(end);
                 if (el.maxLength > 0 && proposed.length > el.maxLength) return 'Máximo ' + el.maxLength + ' caracteres.';
-                if (el.type !== 'password' && forbidden.test(proposed)) return 'No se admiten estos símbolos o caracteres invisibles.';
+                if (el.type !== 'password' && el.dataset.passwordField !== '1' && forbidden.test(proposed)) return 'No se admiten estos símbolos o caracteres invisibles.';
                 if (el.dataset.regla === 'nombre-persona' && !/^[\p{L}\p{M} '\u2019.\-]*$/u.test(proposed)) return 'Use letras, acentos, espacios, apóstrofos, puntos o guiones; no números.';
                 if (el.dataset.regla === 'codigo' && proposed && !/^[A-Za-z][A-Za-z0-9_-]*$/.test(proposed)) return el.dataset.ayuda;
                 if (el.dataset.regla === 'usuario-nuevo' && proposed && !/^[A-Za-z][A-Za-z0-9._-]*$/.test(proposed)) return el.dataset.ayuda;

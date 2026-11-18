@@ -8,29 +8,79 @@
 <style>
 .admin-dialog-heading{display:flex;align-items:center;gap:14px;margin-bottom:20px}.admin-profile-avatar{display:grid;place-items:center;width:48px;height:48px;flex:none;border-radius:50%;background:#cfe2ff;color:#2756b7;font-size:15px;font-weight:700;letter-spacing:.01em}.admin-dialog-heading h2{margin:0}.admin-dialog-heading .admin-dialog-lead{margin:4px 0 0}.admin-account-state{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #e2e9ed;border-radius:15px;background:#fbfcfd}.admin-account-copy strong,.admin-account-copy small{display:block}.admin-account-copy strong{color:#53687c;font-size:13px;font-weight:600}.admin-account-copy small{margin-top:3px;color:#8491a3;font-size:11px}.admin-account-check{display:inline-flex;align-items:center;gap:8px;flex:none;padding:9px 13px;border:1px solid #dfe7eb;border-radius:999px;background:#fff}.admin-account-check input{width:18px;height:18px;margin:0;accent-color:#0d7a48;cursor:pointer}.admin-account-check label{margin:0;color:#34465a;font-size:12px;font-weight:600;cursor:pointer}@media(max-width:560px){.admin-dialog-heading{align-items:flex-start}.admin-profile-avatar{width:42px;height:42px}.admin-account-state{align-items:flex-start;flex-direction:column}}
 </style>
-<style>.password-guide{margin-top:10px;padding:12px;background:#f5faf7;border-radius:12px;font-size:13px}.password-guide meter{width:100%;height:14px}.password-guide label{display:block;margin:5px 0}.password-guide input{accent-color:#087d49;margin-right:8px}</style><script>document.addEventListener('DOMContentLoaded',function(){
+<style>
+.password-guide{grid-column:1/-1;margin-top:10px;padding:12px 14px;background:#f5faf7;border-radius:12px;font-size:13px}
+.password-guide meter{width:100%;height:14px;margin:6px 0 4px}
+.password-guide-title{margin:8px 0 4px;color:#34465a;font-weight:600}
+.password-guide ul{list-style:none;margin:0;padding:0}
+.password-guide li{display:flex;align-items:center;gap:9px;margin:5px 0;color:#5d6c7e}
+.password-guide .pw-icon{display:inline-grid;place-items:center;width:16px;flex:none;font-weight:700;font-size:14px;line-height:1}
+.password-guide li.ok .pw-icon{color:#1a9c5b}
+.password-guide li.fail .pw-icon{color:#d1324b}
+.password-guide li.pending .pw-icon{color:#a7b2bf}
+.pw-wrap{position:relative;display:block}
+.pw-wrap>.form-control{padding-right:46px}
+.pw-eye{position:absolute;top:0;right:0;display:grid;place-items:center;width:44px;height:38px;padding:0;border:0;background:transparent;color:#6b7a8c;cursor:pointer;border-radius:0 10px 10px 0}
+.pw-eye:hover{color:#0d7a48}.pw-eye:focus-visible{outline:2px solid #0d7a48;outline-offset:-3px}
+.pw-eye svg{width:20px;height:20px}
+.admin-dialog{scrollbar-width:none;-ms-overflow-style:none}.admin-dialog::-webkit-scrollbar{display:none}
+.form-control.pw-match,.form-control.pw-match:focus{border-color:#1a9c5b;box-shadow:0 0 0 3px rgba(26,156,91,.16)}
+.form-control.pw-mismatch,.form-control.pw-mismatch:focus{border-color:#d1324b;box-shadow:0 0 0 3px rgba(209,50,75,.16)}
+</style><script>document.addEventListener('DOMContentLoaded',function(){
+ // Botón de ojo para mostrar/ocultar en todos los campos de contraseña del modal.
+ const ojo='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+ const ojoTachado='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/></svg>';
+ document.querySelectorAll('.admin-dialog input[type="password"]').forEach(function(field){
+  field.dataset.passwordField='1';
+  if(field.form)field.form.addEventListener('submit',function(){field.type='password';});
+  const wrap=document.createElement('span');wrap.className='pw-wrap';
+  field.parentNode.insertBefore(wrap,field);wrap.appendChild(field);
+  const btn=document.createElement('button');btn.type='button';btn.className='pw-eye';btn.setAttribute('aria-controls',field.id);
+  function pintar(){const visible=field.type==='text';btn.innerHTML=visible?ojoTachado:ojo;btn.setAttribute('aria-label',visible?'Ocultar contraseña':'Mostrar contraseña');btn.setAttribute('aria-pressed',visible?'true':'false');btn.title=visible?'Ocultar contraseña':'Mostrar contraseña';}
+  function ajustar(){if(field.offsetHeight)btn.style.height=field.offsetHeight+'px';}
+  btn.addEventListener('click',function(){const pos=field.selectionStart;field.type=field.type==='password'?'text':'password';pintar();field.focus();try{field.setSelectionRange(pos,pos);}catch(e){}});
+  wrap.appendChild(btn);pintar();ajustar();field.addEventListener('focus',ajustar);window.addEventListener('resize',ajustar);
+ });
  document.querySelectorAll('[data-password-policy]').forEach(function(field){
   const min=Number(field.dataset.minimo),max=Number(field.dataset.maximo);
+  const confirmField=document.querySelector('[data-igual="'+field.id+'"]');
   const rules=[['Al menos '+min+' caracteres',v=>v.length>=min],['Máximo '+max+' caracteres',v=>v.length<=max]];
   if(field.dataset.mayuscula==='1')rules.push(['Una mayúscula (A–Z)',v=>/[A-Z]/.test(v)]);
   if(field.dataset.numero==='1')rules.push(['Un número (0–9)',v=>/[0-9]/.test(v)]);
   const box=document.createElement('div');box.className='password-guide';box.id=field.id+'Guide';
   const status=document.createElement('div');status.setAttribute('aria-live','polite');box.appendChild(status);
   const meter=document.createElement('meter');meter.min=0;meter.max=4;meter.low=2;meter.high=3;meter.optimum=4;meter.setAttribute('aria-label','Seguridad estimada de la contraseña');box.appendChild(meter);
-  const checks=rules.map(r=>{const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.disabled=true;label.appendChild(check);label.appendChild(document.createTextNode(r[0]));box.appendChild(label);return check;});
-  field.insertAdjacentElement('afterend',box);field.setAttribute('aria-describedby',box.id);
-  function update(){const value=field.value,missing=[];rules.forEach((r,i)=>{checks[i].checked=r[1](value);if(!checks[i].checked)missing.push(r[0]);});
+  const title=document.createElement('div');title.className='password-guide-title';title.textContent='Elige una contraseña segura:';box.appendChild(title);
+  const list=document.createElement('ul');box.appendChild(list);
+  function addItem(text){const li=document.createElement('li'),icon=document.createElement('span');icon.className='pw-icon';icon.setAttribute('aria-hidden','true');li.appendChild(icon);li.appendChild(document.createTextNode(text));list.appendChild(li);return li;}
+  function setItem(li,state){li.className=state;li.firstChild.textContent=state==='ok'?'✓':state==='fail'?'✕':'•';}
+  const items=rules.map(r=>addItem(r[0]));
+  const matchItem=confirmField?addItem('Coincidencia de contraseñas'):null;
+  if(confirmField){const cell=confirmField.closest('.admin-dialog-grid > div');(cell||confirmField).insertAdjacentElement('afterend',box);confirmField.setAttribute('aria-describedby',box.id);}
+  else field.insertAdjacentElement('afterend',box);
+  field.setAttribute('aria-describedby',box.id);
+  function update(){const value=field.value,missing=[];
+   rules.forEach((r,i)=>{const ok=r[1](value);setItem(items[i],!value?'pending':ok?'ok':'fail');if(!ok)missing.push(r[0]);});
    const optional=!value&&field.dataset.obligatoria==='0';
    let score=!value?0:missing.length?1:value.length>=16&&/[a-z]/.test(value)&&/[^a-zA-Z0-9]/.test(value)?4:3;
    meter.value=score;status.textContent=optional?'Vacía: se conserva la contraseña actual.':!value?'Escriba una contraseña.':score===1?'Insegura: faltan requisitos.':score===4?'Segura (estimación).':'Cumple los requisitos; seguridad media.';
    field.setCustomValidity(optional?'':missing.length?'Falta: '+missing.join(', '):'');
+   if(confirmField){const conf=confirmField.value,match=conf===value;
+    setItem(matchItem,!value&&!conf?'pending':conf&&match?'ok':'fail');
+    confirmField.classList.toggle('pw-match',!!conf&&match);
+    confirmField.classList.toggle('pw-mismatch',!!conf&&!match);
+    confirmField.setCustomValidity(match?'':value&&!conf?'Confirme la contraseña.':'Las contraseñas no coinciden.');}
   }
-  field.addEventListener('input',update);field.addEventListener('change',update);update();
+  field.addEventListener('input',update);field.addEventListener('change',update);
+  if(confirmField){confirmField.addEventListener('input',update);confirmField.addEventListener('change',update);}
+  update();
  });
 });
 </script></asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
 <div class="finance-page admin-page">
+ <%-- Fuera del modal: el modal no se renderiza cerrado y el modo elegido debe llegar al servidor. --%>
+ <asp:HiddenField ID="hfModoRestablecer" ClientIDMode="Static" runat="server"/>
  <div id="pnlMensaje" runat="server" class="alert" role="status" aria-live="polite"><asp:Literal ID="mensaje" runat="server" Mode="Encode" /></div>
  <asp:Panel ID="contenidoAdmin" runat="server">
   <header class="admin-heading"><div><div class="eyebrow">CapitalWest / Administración</div><h1>Centro de administración</h1><p>Gestiona accesos, cuentas y la actividad del sistema.</p></div><asp:Button ID="btnNuevo" runat="server" Text="＋ Nuevo usuario" CssClass="btn btn-primary" CausesValidation="false" /></header>
@@ -48,12 +98,12 @@
   <asp:Panel ID="modalUsuario" data-finanzas-form="usuario" runat="server" Visible="false" CssClass="admin-overlay" role="dialog" aria-modal="true" aria-labelledby="tituloModalUsuario" onclick="if(event.target === this){var cancelButton=document.getElementById('btnCancelar');if(cancelButton){cancelButton.click();}}">
  <section class="admin-dialog"><div class="text-danger" role="alert"><asp:Literal ID="errorModal" runat="server" Mode="Encode"/></div>
   <div class="admin-dialog-heading"><span id="adminUserAvatarInitials" class="admin-profile-avatar" aria-hidden="true">US</span><div><h2 id="tituloModalUsuario"><asp:Literal ID="litTituloModal" runat="server" Mode="Encode" /></h2><p class="admin-dialog-lead"><asp:Literal ID="litDialogLead" runat="server" Mode="Encode" /></p></div></div>
-  <asp:HiddenField ID="hfUsuarioId" runat="server"/><asp:HiddenField ID="hfModoRestablecer" ClientIDMode="Static" runat="server"/>
+  <asp:HiddenField ID="hfUsuarioId" runat="server"/>
   <asp:Panel ID="pnlDatosUsuario" runat="server">
-   <div class="admin-dialog-grid"><div><label for="<%= txtNombreCompleto.ClientID %>">Nombre completo</label><asp:TextBox ID="txtNombreCompleto" runat="server" CssClass="form-control" MaxLength="80" required="required" aria-describedby="txtNombreCompletoAyuda"/><small id="txtNombreCompletoAyuda" class="admin-help">Nombre y apellido · Máx. 80</small></div><div><label for="<%= txtNombreUsuario.ClientID %>">Nombre de usuario</label><asp:TextBox ID="txtNombreUsuario" runat="server" CssClass="form-control" MaxLength="20" minlength="3" required="required" aria-describedby="txtNombreUsuarioAyuda"/><small id="txtNombreUsuarioAyuda" class="admin-help">3–20 caracteres · Sin espacios</small></div><div><label for="<%= txtCorreo.ClientID %>">Correo</label><asp:TextBox ID="txtCorreo" runat="server" CssClass="form-control" TextMode="Email" MaxLength="35" required="required" aria-describedby="txtCorreoAyuda"/><small id="txtCorreoAyuda" class="admin-help">Ej. nombre@dominio.com · Máx. 35</small></div><div><label for="<%= ddlRol.ClientID %>">Rol</label><asp:DropDownList ID="ddlRol" runat="server" CssClass="form-select" required="required" aria-describedby="ddlRolAyuda"/><small id="ddlRolAyuda" class="admin-help">Seleccione un rol activo.</small></div><div><label for="txtClave">Contraseña inicial</label><asp:TextBox ID="txtClave" runat="server" CssClass="form-control" TextMode="Password" MaxLength="128" autocomplete="new-password"/><small class="admin-help">Obligatoria para cuentas nuevas.</small></div><div class="admin-account-state"><div class="admin-account-copy"><strong>Estado de la cuenta</strong><small>Define si el usuario puede iniciar sesión.</small></div><asp:CheckBox ID="chkActivo" runat="server" Text="Activa" Checked="true" CssClass="admin-account-check"/></div></div>
+   <div class="admin-dialog-grid"><div><label for="<%= txtNombreCompleto.ClientID %>">Nombre completo</label><asp:TextBox ID="txtNombreCompleto" runat="server" CssClass="form-control" MaxLength="80" required="required" aria-describedby="txtNombreCompletoAyuda"/><small id="txtNombreCompletoAyuda" class="admin-help">Nombre y apellido · Máx. 80</small></div><div><label for="<%= txtNombreUsuario.ClientID %>">Nombre de usuario</label><asp:TextBox ID="txtNombreUsuario" runat="server" CssClass="form-control" MaxLength="20" minlength="3" required="required" aria-describedby="txtNombreUsuarioAyuda"/><small id="txtNombreUsuarioAyuda" class="admin-help">3–20 caracteres · Sin espacios</small></div><div><label for="<%= txtCorreo.ClientID %>">Correo</label><asp:TextBox ID="txtCorreo" runat="server" CssClass="form-control" TextMode="Email" MaxLength="35" required="required" aria-describedby="txtCorreoAyuda"/><small id="txtCorreoAyuda" class="admin-help">Ej. nombre@dominio.com · Máx. 35</small></div><div><label for="<%= ddlRol.ClientID %>">Rol</label><asp:DropDownList ID="ddlRol" runat="server" CssClass="form-select" required="required" aria-describedby="ddlRolAyuda"/><small id="ddlRolAyuda" class="admin-help">Seleccione un rol activo.</small></div><div><label for="txtClave">Contraseña inicial</label><asp:TextBox ID="txtClave" runat="server" CssClass="form-control" TextMode="Password" MaxLength="128" autocomplete="new-password"/><small class="admin-help">Obligatoria para cuentas nuevas.</small></div><div><label for="<%= txtClaveConfirmacion.ClientID %>">Repetir contraseña</label><asp:TextBox ID="txtClaveConfirmacion" runat="server" CssClass="form-control" TextMode="Password" MaxLength="128" autocomplete="new-password"/><small class="admin-help">Escríbela de nuevo para confirmar.</small></div><div class="admin-account-state"><div class="admin-account-copy"><strong>Estado de la cuenta</strong><small>Define si el usuario puede iniciar sesión.</small></div><asp:CheckBox ID="chkActivo" runat="server" Text="Activa" Checked="true" CssClass="admin-account-check"/></div></div>
   </asp:Panel>
   <asp:Panel ID="pnlClaveManual" runat="server" Visible="false" CssClass="admin-manual-password">
-   <div class="admin-manual-password-heading"><strong>Clave para <asp:Literal ID="litUsuarioClaveManual" runat="server" Mode="Encode" /></strong><span>Esta clave se solicitará cambiar al usuario en su próximo ingreso.</span></div>
+   <div class="admin-manual-password-heading"><strong>Nueva contraseña para <asp:Literal ID="litUsuarioClaveManual" runat="server" Mode="Encode" /></strong><span>Esta clave se solicitará cambiar al usuario en su próximo ingreso.</span></div>
    <div class="admin-dialog-grid"><div><label for="txtClaveManual">Nueva contraseña</label><asp:TextBox ID="txtClaveManual" runat="server" CssClass="form-control" TextMode="Password" MaxLength="128" autocomplete="new-password" required="required"/></div><div><label for="txtClaveManualConfirmacion">Confirmar contraseña</label><asp:TextBox ID="txtClaveManualConfirmacion" runat="server" CssClass="form-control" TextMode="Password" MaxLength="128" autocomplete="new-password" required="required"/></div></div>
    <small class="admin-help">Usa la política de seguridad configurada. La clave no se mostrará después de guardar.</small>
   </asp:Panel>
@@ -70,24 +120,59 @@
  <section class="admin-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="adminConfirmTitle" aria-describedby="adminConfirmMessage">
   <div class="admin-confirm-heading"><span class="admin-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></svg></span><h2 id="adminConfirmTitle">Confirmar acción</h2></div>
   <p id="adminConfirmMessage"></p>
-  <div class="admin-confirm-actions"><button type="button" class="btn btn-light" onclick="cerrarConfirmacionUsuario();">Cancelar</button><button type="button" id="adminConfirmManual" class="btn btn-light" hidden onclick="definirClaveManualUsuario();">Clave manual</button><button type="button" id="adminConfirmProceed" class="admin-confirm-submit" onclick="continuarAccionUsuario();">Confirmar</button></div>
+  <div class="admin-confirm-actions"><button type="button" class="btn btn-light" onclick="cerrarConfirmacionUsuario();">Cancelar</button><button type="button" id="adminConfirmProceed" class="admin-confirm-submit" onclick="continuarAccionUsuario();">Confirmar</button></div>
  </section>
 </div>
+<div id="adminResetDialog" class="admin-confirm-backdrop" hidden role="presentation" onclick="if(event.target===this)cerrarRestablecimientoUsuario();">
+ <section class="admin-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="adminResetTitle" aria-describedby="adminResetLead">
+  <div class="admin-confirm-heading"><span class="admin-confirm-icon admin-reset-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div><h2 id="adminResetTitle">Cambiar contraseña</h2><p class="admin-reset-user" id="adminResetUser"></p></div></div>
+  <p id="adminResetLead">¿Cómo quieres crear la nueva contraseña?</p>
+  <div class="admin-reset-options" role="radiogroup" aria-labelledby="adminResetLead">
+   <label class="admin-reset-option"><input type="radio" name="adminResetMode" value="MANUAL" checked /><span class="admin-reset-option-body"><strong>La escribo yo</strong><small>Escribes la contraseña nueva en el siguiente paso y se la dices al usuario.</small></span></label>
+   <label class="admin-reset-option"><input type="radio" name="adminResetMode" value="GENERADA" /><span class="admin-reset-option-body"><strong>Que el sistema la genere</strong><small>Se crea una contraseña segura al instante para que la copies. Solo se muestra una vez.</small></span></label>
+  </div>
+  <p class="admin-reset-note">En los dos casos, el usuario tendrá que cambiarla la próxima vez que inicie sesión.</p>
+  <div class="admin-confirm-actions"><button type="button" class="btn btn-light" onclick="cerrarRestablecimientoUsuario();">Cancelar</button><button type="button" id="adminResetContinue" class="admin-confirm-submit" onclick="continuarRestablecimientoUsuario();">Continuar</button></div>
+ </section>
+</div>
+<style>
+.admin-reset-icon{background:#e7f5ee;color:#087849}.admin-reset-user{margin:2px 0 0!important;color:#8491a3!important;font-size:12px!important}
+.admin-reset-options{display:grid;gap:10px;margin:14px 0 12px}
+.admin-reset-option{display:flex;align-items:flex-start;gap:12px;margin:0;padding:14px 16px;border:1.5px solid #e1e8ec;border-radius:14px;background:#fff;cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.admin-reset-option:hover{border-color:#9ed8bd}
+.admin-reset-option:has(input:checked){border-color:#0d7a48;background:#f3fbf6;box-shadow:0 0 0 3px rgba(13,122,72,.08)}
+.admin-reset-option input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:#0d7a48;cursor:pointer}
+.admin-reset-option-body strong{display:block;color:#1c2a3d;font-size:14px}
+.admin-reset-option-body small{display:block;margin-top:3px;color:#738194;font-size:12px;line-height:1.45}
+.admin-reset-note{padding:10px 12px;border-radius:10px;background:#fff8ec;color:#8a5a0c!important;font-size:12px!important}
+</style>
 <script>
 (function(){
- var accionPendiente=null,permitirAccion=false,overlay=document.getElementById('adminActionConfirm'),botonConfirmar=document.getElementById('adminConfirmProceed'),botonManual=document.getElementById('adminConfirmManual'),modo=document.getElementById('hfModoRestablecer');
- function mostrarConfirmacion(control,titulo,mensaje,accion,tono,opcionManual){
+ var accionPendiente=null,permitirAccion=false,overlay=document.getElementById('adminActionConfirm'),botonConfirmar=document.getElementById('adminConfirmProceed'),modo=document.getElementById('hfModoRestablecer');
+ var reset=document.getElementById('adminResetDialog'),resetContinuar=document.getElementById('adminResetContinue');
+ function mostrarConfirmacion(control,titulo,mensaje,accion,tono){
   if(permitirAccion){permitirAccion=false;return true;}
-  accionPendiente=control;if(modo)modo.value='';document.getElementById('adminConfirmTitle').textContent=titulo;document.getElementById('adminConfirmMessage').textContent=mensaje;botonConfirmar.textContent=accion;botonConfirmar.className='admin-confirm-submit '+(tono||'');botonManual.hidden=!opcionManual;overlay.hidden=false;(opcionManual?botonManual:botonConfirmar).focus();return false;
+  accionPendiente=control;if(modo)modo.value='';document.getElementById('adminConfirmTitle').textContent=titulo;document.getElementById('adminConfirmMessage').textContent=mensaje;botonConfirmar.textContent=accion;botonConfirmar.className='admin-confirm-submit '+(tono||'');overlay.hidden=false;botonConfirmar.focus();return false;
  }
- window.confirmarAccionUsuario=function(control,titulo,mensaje,accion,tono){return mostrarConfirmacion(control,titulo,mensaje,accion,tono,false);};
- window.confirmarRestablecimientoUsuario=function(control){return mostrarConfirmacion(control,'Restablecer contraseña','Elige cómo quieres asignar la nueva clave. En ambos casos, el usuario deberá cambiarla en su próximo ingreso.','Generar clave','warning',true);};
+ window.confirmarAccionUsuario=function(control,titulo,mensaje,accion,tono){return mostrarConfirmacion(control,titulo,mensaje,accion,tono);};
+ function modoElegido(){var r=reset.querySelector('input[name="adminResetMode"]:checked');return r?r.value:'MANUAL';}
+ function actualizarBotonReset(){resetContinuar.textContent=modoElegido()==='GENERADA'?'Generar contraseña':'Continuar';}
+ reset.querySelectorAll('input[name="adminResetMode"]').forEach(function(r){r.addEventListener('change',actualizarBotonReset);});
+ window.confirmarRestablecimientoUsuario=function(control){
+  if(permitirAccion){permitirAccion=false;return true;}
+  accionPendiente=control;if(modo)modo.value='';
+  var fila=control.closest('tr'),nombre=fila&&fila.querySelector('.admin-user-name'),usuario=fila&&fila.querySelector('.admin-user-id');
+  document.getElementById('adminResetUser').textContent=nombre?nombre.textContent.trim()+(usuario?' · '+usuario.textContent.trim():''):'';
+  reset.querySelector('input[value="MANUAL"]').checked=true;actualizarBotonReset();
+  reset.hidden=false;reset.querySelector('input[name="adminResetMode"]:checked').focus();return false;
+ };
  window.cerrarConfirmacionUsuario=function(){if(!overlay)return;overlay.hidden=true;if(accionPendiente){accionPendiente.focus();}accionPendiente=null;if(modo)modo.value='';};
- function enviarAccion(modoClave){if(!accionPendiente)return;if(modo)modo.value=modoClave;var control=accionPendiente;overlay.hidden=true;accionPendiente=null;permitirAccion=true;control.click();}
- window.continuarAccionUsuario=function(){enviarAccion('GENERADA');};
- window.definirClaveManualUsuario=function(){enviarAccion('MANUAL');};
+ window.cerrarRestablecimientoUsuario=function(){reset.hidden=true;if(accionPendiente){accionPendiente.focus();}accionPendiente=null;if(modo)modo.value='';};
+ function enviarAccion(modoClave){if(!accionPendiente)return;if(modo)modo.value=modoClave;var control=accionPendiente;overlay.hidden=true;reset.hidden=true;accionPendiente=null;permitirAccion=true;control.click();}
+ window.continuarAccionUsuario=function(){enviarAccion('');};
+ window.continuarRestablecimientoUsuario=function(){enviarAccion(modoElegido());};
  window.copiarClaveGenerada=function(){var texto=document.getElementById('generatedPassword').textContent,estado=document.getElementById('adminCopyStatus');if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(texto).then(function(){estado.textContent='Clave copiada al portapapeles.';}).catch(function(){estado.textContent='No se pudo copiar; selecciona la clave y cópiala manualmente.';});return;}var campo=document.createElement('textarea');campo.value=texto;campo.style.position='fixed';campo.style.opacity='0';document.body.appendChild(campo);campo.select();try{document.execCommand('copy');estado.textContent='Clave copiada al portapapeles.';}catch(e){estado.textContent='No se pudo copiar; selecciona la clave y cópiala manualmente.';}campo.remove();};
- document.addEventListener('keydown',function(e){if(!overlay.hidden&&e.key==='Escape'){e.preventDefault();window.cerrarConfirmacionUsuario();}});
+ document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;if(!reset.hidden){e.preventDefault();window.cerrarRestablecimientoUsuario();}else if(!overlay.hidden){e.preventDefault();window.cerrarConfirmacionUsuario();}});
 })();
 </script>
 <script>

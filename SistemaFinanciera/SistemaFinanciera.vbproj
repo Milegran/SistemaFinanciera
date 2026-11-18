@@ -49,6 +49,7 @@
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Core" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -282,6 +283,7 @@
       <DependentUpon>Usuarios.aspx</DependentUpon>
       <SubType>ASPXCodebehind</SubType>
     </Compile>
+    <Compile Include="AccesoPantallas.vb" />
     <Compile Include="FinanzasPagina.vb">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -393,6 +395,9 @@
       <DependentUpon>Reportes.aspx</DependentUpon>
       <SubType>ASPXCodebehind</SubType>
     </Compile>
+    <Compile Include="Simulador\Cotizacion.vb" />
+    <Compile Include="Simulador\CotizacionPdf.vb" />
+    <Compile Include="Simulador\CotizacionExcel.vb" />
     <Compile Include="Simulador\Simulador.aspx.designer.vb">
       <DependentUpon>Simulador.aspx</DependentUpon>
     </Compile>

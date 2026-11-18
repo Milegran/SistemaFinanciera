@@ -48,6 +48,7 @@ Partial Public Class _Default
     '''Para modificarlo, mueva la declaración del campo del archivo del diseñador al archivo de código subyacente.
     '''</remarks>
     Protected WithEvents pnlResumenError As Global.System.Web.UI.WebControls.Panel
+    Protected WithEvents pnlAccesoDenegado As Global.System.Web.UI.WebControls.Panel
 
     '''<summary>
     '''Control litCarteraTotal.

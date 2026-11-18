@@ -10,6 +10,7 @@ Public Class _Default
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         If IsPostBack Then Return
+        pnlAccesoDenegado.Visible = String.Equals(Request.QueryString("acceso"), "denegado", StringComparison.OrdinalIgnoreCase)
         Try
             Dim datos = ServicioFinanzas.ObtenerResumenDashboard(Actor.Id)
             Dim indicadores = datos.Tables("Indicadores").Rows(0)

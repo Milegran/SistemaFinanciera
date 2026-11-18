@@ -39,10 +39,13 @@ Public Class Usuarios
         txtNombreUsuario.Attributes("data-patron")=SistemaFinanciera.BL.FinanzasServicio.PatronUsuarioNuevo
         txtNombreUsuario.Attributes("data-ayuda")="Use 3–20 caracteres, comience con letra; solo letras, números, punto, guion o guion bajo."
         txtClaveManualConfirmacion.Attributes("data-igual")=txtClaveManual.ClientID
+        txtClaveConfirmacion.Attributes("data-igual")=txtClave.ClientID
         If String.IsNullOrEmpty(hfUsuarioId.Value) Then
             txtClave.Attributes("required")="required"
+            txtClaveConfirmacion.Attributes("required")="required"
         Else
             txtClave.Attributes.Remove("required")
+            txtClaveConfirmacion.Attributes.Remove("required")
         End If
         Try
             Dim reglas=ServicioFinanzas.PoliticaClaveActual()
@@ -130,6 +133,7 @@ Public Class Usuarios
                 Return
             End If
             If Not Integer.TryParse(ddlRol.SelectedValue,rolId) Then Throw New ArgumentException("Seleccione un rol.")
+            If Not String.Equals(txtClave.Text,txtClaveConfirmacion.Text,StringComparison.Ordinal) Then Throw New ArgumentException("Las contraseñas no coinciden.")
             ServicioFinanzas.GuardarUsuarioAdministracion(Actor.Id,id,txtNombreUsuario.Text.Trim(),txtNombreCompleto.Text.Trim(),txtCorreo.Text.Trim(),rolId,chkActivo.Checked,txtClave.Text)
             modalUsuario.Visible=False
             LimpiarModoModal()
@@ -160,7 +164,7 @@ Public Class Usuarios
                 chkActivo.Checked=CBool(clave("Activo"))
                 Dim roles=CStr(clave("RolIds")).Split(","c)
                 If roles.Length>0 AndAlso ddlRol.Items.FindByValue(roles(0)) IsNot Nothing Then ddlRol.SelectedValue=roles(0)
-                txtClave.Text=""
+                txtClave.Text="" : txtClaveConfirmacion.Text=""
                 txtClave.Attributes("placeholder")="Dejar vacío para conservar la clave"
                 litTituloModal.Text="Editar usuario"
                 litDialogLead.Text="Actualiza el perfil, el rol o las credenciales del usuario."
@@ -179,8 +183,8 @@ Public Class Usuarios
             Ejecutar(Sub()
                 If String.Equals(hfModoRestablecer.Value,"MANUAL",StringComparison.Ordinal) Then
                     hfUsuarioId.Value=id.ToString(Globalization.CultureInfo.InvariantCulture)
-                    litTituloModal.Text="Definir contraseña manual"
-                    litDialogLead.Text="Define una nueva clave para esta cuenta."
+                    litTituloModal.Text="Escribir nueva contraseña"
+                    litDialogLead.Text="Escribe la contraseña dos veces y pulsa Guardar contraseña."
                     litUsuarioClaveManual.Text=CStr(clave("NombreCompleto"))
                     txtClaveManual.Text="" : txtClaveManualConfirmacion.Text=""
                     pnlDatosUsuario.Visible=False : pnlClaveManual.Visible=True : pnlClaveGenerada.Visible=False : pnlModalAcciones.Visible=True
@@ -210,7 +214,7 @@ Public Class Usuarios
         LimpiarModoModal()
         hfUsuarioId.Value=""
         txtNombreUsuario.ReadOnly=False
-        txtNombreUsuario.Text="" : txtNombreCompleto.Text="" : txtCorreo.Text="" : txtClave.Text=""
+        txtNombreUsuario.Text="" : txtNombreCompleto.Text="" : txtCorreo.Text="" : txtClave.Text="" : txtClaveConfirmacion.Text=""
         txtClave.Attributes.Remove("placeholder")
         chkActivo.Checked=True
         If ddlRol.Items.Count>0 Then ddlRol.SelectedIndex=0

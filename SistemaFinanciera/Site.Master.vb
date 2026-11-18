@@ -43,6 +43,10 @@ Public Class SiteMaster
                                 String.Join(" · ", usuario.Roles.Select(Function(rol) RolVisible(rol))))
         litUsuarioIniciales.Text = Iniciales(litUsuarioNombre.Text)
     End Sub
+    ''' <summary>Para el menú: muestra el enlace solo si el rol del usuario puede abrir esa pantalla.</summary>
+    Protected Function Ver(ruta As String) As Boolean
+        Return AccesoPantallas.Permite(usuarioActual, ruta)
+    End Function
     Protected Sub CargarNotificaciones(sender As Object, e As EventArgs) Handles Me.PreRender
         If usuarioActual Is Nothing Then Return
         pnlToastNotificacion.Visible = False
@@ -59,9 +63,21 @@ Public Class SiteMaster
             litNotificacionesConteo.Text = If(noLeidas = 0, "Todo al día", noLeidas.ToString(CultureInfo.InvariantCulture) & " sin leer")
             litNotificacionesNoLeidas.Text = If(noLeidas > 99, "99+", If(noLeidas > 0, noLeidas.ToString(CultureInfo.InvariantCulture), ""))
 
+            ' Primera página de la sesión (justo después del login): todo lo existente,
+            ' incluido el propio aviso de "Inicio de sesión", ya está en la campana.
+            ' Se toma como línea base y solo se muestran avisos que lleguen después.
+            Dim maxId As Long = If(filas.Rows.Count = 0, 0L, filas.AsEnumerable().Max(Function(fila) CLng(fila("Id"))))
+            If Session("CW_UltimaNotificacionToast") Is Nothing Then
+                Session("CW_UltimaNotificacionToast") = maxId.ToString(CultureInfo.InvariantCulture)
+                Return
+            End If
             Dim ultimaVista As Long = 0
             Long.TryParse(Convert.ToString(Session("CW_UltimaNotificacionToast"), CultureInfo.InvariantCulture), ultimaVista)
-            Dim nueva = filas.AsEnumerable().FirstOrDefault(Function(fila) Not Convert.ToBoolean(fila("Leida")) AndAlso CLng(fila("Id")) > ultimaVista)
+            Dim nueva = filas.AsEnumerable().
+                Where(Function(fila) Not Convert.ToBoolean(fila("Leida")) AndAlso CLng(fila("Id")) > ultimaVista AndAlso
+                                     Not String.Equals(Convert.ToString(fila("Accion")), "INICIO_SESION", StringComparison.OrdinalIgnoreCase)).
+                OrderByDescending(Function(fila) CLng(fila("Id"))).FirstOrDefault()
+            If maxId > ultimaVista Then Session("CW_UltimaNotificacionToast") = maxId.ToString(CultureInfo.InvariantCulture)
             If nueva IsNot Nothing Then
                 litToastTitulo.Text = Convert.ToString(nueva("Titulo"))
                 litToastMensaje.Text = Convert.ToString(nueva("Mensaje"))

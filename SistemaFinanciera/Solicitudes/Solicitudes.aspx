@@ -4,7 +4,7 @@
 <asp:Panel ID="pnlListadoSolicitudes" runat="server" CssClass="request-listing-shell">
     <header class="page-header page-header--split">
         <div><h1>Solicitudes de crédito</h1><p>CapitalWest · Gestión financiera</p></div>
-        <asp:Panel ID="headerNueva" runat="server" CssClass="request-header-actions"><a href="<%= ResolveUrl("~/Simulador/Simulador.aspx") %>" class="btn request-simulator-link"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M8 6h8M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h.01"/></svg><span>Simulador</span></a><button type="button" class="btn btn-primary" data-abrir-modal-solicitud>+ Nueva solicitud</button></asp:Panel>
+        <asp:Panel ID="headerNueva" runat="server" CssClass="request-header-actions"><% If PuedeVer("Simulador/Simulador.aspx") Then %><a href="<%= ResolveUrl("~/Simulador/Simulador.aspx") %>" class="btn request-simulator-link"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M8 6h8M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h.01"/></svg><span>Simulador</span></a><% End If %><button type="button" class="btn btn-primary" data-abrir-modal-solicitud>+ Nueva solicitud</button></asp:Panel>
     </header>
     <div id="pnlMensaje" runat="server" class="alert" role="status" aria-live="polite"><asp:Literal ID="mensaje" runat="server" Mode="Encode" /></div>
     <section class="customer-profile-kpis request-kpis" aria-label="Resumen de solicitudes">

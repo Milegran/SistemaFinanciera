@@ -33,6 +33,15 @@ Partial Public Class Simulador
     Protected WithEvents comisionEstimado As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents gastosEstimados As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents netoEstimado As Global.System.Web.UI.WebControls.Literal
+    Protected WithEvents clienteCotizacion As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents nombreCotizacion As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents identificacionCotizacion As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents telefonoCotizacion As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents correoCotizacion As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents imprimirCotizacion As Global.System.Web.UI.WebControls.LinkButton
+    Protected WithEvents pdfCotizacion As Global.System.Web.UI.WebControls.LinkButton
+    Protected WithEvents excelCotizacion As Global.System.Web.UI.WebControls.LinkButton
+    Protected WithEvents documentoCotizacion As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents metodoResumen As Global.System.Web.UI.WebControls.Literal
     Protected WithEvents panelComparacion As Global.System.Web.UI.WebControls.Panel
     Protected WithEvents tablaComparacion As Global.System.Web.UI.WebControls.GridView

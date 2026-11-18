@@ -38,6 +38,7 @@ Partial Public Class Usuarios
     Protected WithEvents txtCorreo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents ddlRol As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents txtClave As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtClaveConfirmacion As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents chkActivo As Global.System.Web.UI.WebControls.CheckBox
     Protected WithEvents btnCancelar As Global.System.Web.UI.WebControls.Button
     Protected WithEvents btnGuardar As Global.System.Web.UI.WebControls.Button

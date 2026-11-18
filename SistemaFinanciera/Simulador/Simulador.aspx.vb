@@ -22,6 +22,7 @@ Public Class Simulador
                     condicionesProducto.Text = "No hay productos activos disponibles para simular."
                     simular.Enabled = False
                 End If
+                CargarClientesCotizacion()
                 Dim hoy = ClienteServicio.HoyPanama
                 primerPago.Text = hoy.AddMonths(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
                 primerPago.Attributes("min") = hoy.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
@@ -85,6 +86,7 @@ Public Class Simulador
         End If
         resultados.Visible = False
         Session.Remove("SimuladorPlan")
+        Session.Remove("SimuladorCotizacion")
     End Sub
 
     Protected Sub ProductoCambiado(sender As Object, e As EventArgs) Handles producto.SelectedIndexChanged
@@ -145,6 +147,8 @@ Public Class Simulador
         pnlMensaje.Visible = False
         mensaje.Text = String.Empty
         Session.Remove("SimuladorPlan")
+        Session.Remove("SimuladorCotizacion")
+        LimpiarClienteCotizacion()
     End Sub
 
     Protected Sub SimularClick(sender As Object, e As EventArgs) Handles simular.Click
@@ -173,6 +177,25 @@ Public Class Simulador
         metodoResumen.Text = metodo.SelectedItem.Text
         cantidadPeriodos.Text = plan.Count.ToString("N0", CultureInfo.GetCultureInfo("es-PA"))
         notaMetodo.Text = NotaSegunMetodo(ObtenerCodigoMetodo(solicitud.MetodoId))
+        ' Base de la cotización: el mismo número y datos para imprimir, PDF y Excel.
+        Dim ahoraPanama = DateTime.UtcNow.AddHours(-5)
+        Session("SimuladorCotizacion") = New CotizacionPrestamo With {
+            .Numero = "COT-" & ahoraPanama.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture),
+            .FechaEmision = ahoraPanama,
+            .Producto = producto.SelectedItem.Text,
+            .Metodo = metodo.SelectedItem.Text,
+            .NotaMetodo = notaMetodo.Text,
+            .Periodicidad = If(periodo.SelectedItem Is Nothing, "Mensual", periodo.SelectedItem.Text),
+            .TasaAnual = If(datosProducto.IsNull("TasaAnual"), 0D, CDec(datosProducto("TasaAnual"))),
+            .TipoTasa = If(datosProducto.IsNull("TipoTasa"), "", CStr(datosProducto("TipoTasa"))),
+            .Monto = solicitud.Monto,
+            .Plazo = plan.Count,
+            .FechaPrimerPago = solicitud.FechaPrimerPago,
+            .Comision = comision,
+            .Gastos = gastos,
+            .Asesor = If(Actor Is Nothing, "", Actor.Nombre),
+            .Plan = plan}
+        documentoCotizacion.Text = ""
         tablaPlan.PageIndex = 0
         Vincular(tablaPlan, plan)
         resultados.Visible = True
@@ -236,6 +259,117 @@ Public Class Simulador
     Private Shared Function FormatoDinero(valor As Decimal) As String
         Return "B/. " & valor.ToString("N2", CultureInfo.GetCultureInfo("es-PA"))
     End Function
+
+    ' ---------- Cotización: cliente, impresión, PDF y Excel ----------
+
+    Private Sub CargarClientesCotizacion()
+        clienteCotizacion.Items.Clear()
+        clienteCotizacion.Items.Add(New ListItem("Cliente no registrado (escribir datos)", ""))
+        Try
+            For Each fila As DataRow In ServicioFinanzas.Consultar("CLIENTES", Actor.Id).Rows
+                clienteCotizacion.Items.Add(New ListItem(Convert.ToString(fila("Nombre"), CultureInfo.InvariantCulture), Convert.ToString(fila("Id"), CultureInfo.InvariantCulture)))
+            Next
+        Catch ex As Exception When TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is ArgumentException OrElse TypeOf ex Is InvalidOperationException
+            ' Sin permiso para consultar clientes: solo se permite escribir los datos.
+            clienteCotizacion.Enabled = False
+        End Try
+    End Sub
+
+    Private Sub LimpiarClienteCotizacion()
+        If clienteCotizacion.Items.Count > 0 Then clienteCotizacion.SelectedIndex = 0
+        For Each campo In {nombreCotizacion, identificacionCotizacion, telefonoCotizacion, correoCotizacion}
+            campo.Text = String.Empty
+            campo.ReadOnly = False
+        Next
+    End Sub
+
+    Protected Sub ClienteCotizacionCambiado(sender As Object, e As EventArgs) Handles clienteCotizacion.SelectedIndexChanged
+        Ejecutar(Sub()
+            Dim id As Integer
+            If Not Integer.TryParse(clienteCotizacion.SelectedValue, id) OrElse id <= 0 Then
+                LimpiarClienteCotizacion()
+                Return
+            End If
+            Dim config = ConfigurationManager.ConnectionStrings("SistemaFinanciera")
+            Dim cliente = New ClienteServicio(New SistemaFinanciera.DAL.ClienteRepositorio(config.ConnectionString)).Obtener(id)
+            If cliente Is Nothing Then Throw New InvalidOperationException("No se encontró el cliente seleccionado.")
+            nombreCotizacion.Text = cliente.NombreCompleto
+            identificacionCotizacion.Text = If(cliente.Identificacion, "")
+            telefonoCotizacion.Text = If(cliente.Telefono, "")
+            correoCotizacion.Text = If(cliente.Correo, "")
+            For Each campo In {nombreCotizacion, identificacionCotizacion, telefonoCotizacion, correoCotizacion}
+                campo.ReadOnly = True
+            Next
+        End Sub)
+    End Sub
+
+    ''' <summary>Abre el desplegable de datos del cliente si ya hay alguno escrito o seleccionado.</summary>
+    Protected Function ClienteCotizacionConDatos() As Boolean
+        Return clienteCotizacion.SelectedIndex > 0 OrElse {nombreCotizacion, identificacionCotizacion, telefonoCotizacion, correoCotizacion}.Any(Function(campo) Not String.IsNullOrWhiteSpace(campo.Text))
+    End Function
+
+    Private Function CotizacionActual() As CotizacionPrestamo
+        Dim c = TryCast(Session("SimuladorCotizacion"), CotizacionPrestamo)
+        If c Is Nothing OrElse c.Plan Is Nothing OrElse c.Plan.Count = 0 Then Throw New InvalidOperationException("Calcula la simulación antes de generar la cotización.")
+        Dim nombre = nombreCotizacion.Text.Trim()
+        Dim identificacion = identificacionCotizacion.Text.Trim()
+        Dim telefono = telefonoCotizacion.Text.Trim()
+        Dim correo = correoCotizacion.Text.Trim()
+        ' Los datos del cliente son opcionales; si se escribe alguno, el nombre es necesario para identificarlo.
+        If nombre = "" AndAlso (identificacion <> "" OrElse telefono <> "" OrElse correo <> "") Then Throw New ArgumentException("Cotización: escribe el nombre del cliente o deja todos sus datos vacíos.")
+        If nombre <> "" AndAlso (nombre.Length < 3 OrElse nombre.Length > 100 OrElse Not RegularExpressions.Regex.IsMatch(nombre, "^[\p{L}][\p{L} .'\-]*$")) Then Throw New ArgumentException("Cotización: el nombre del cliente admite solo letras, espacios, punto, apóstrofo o guion (3 a 100 caracteres).")
+        If identificacion.Length > 30 OrElse (identificacion <> "" AndAlso Not RegularExpressions.Regex.IsMatch(identificacion, "^[A-Za-z0-9][A-Za-z0-9\-]*$")) Then Throw New ArgumentException("Cotización: la identificación solo admite letras, números y guiones (máximo 30).")
+        If telefono <> "" AndAlso Not RegularExpressions.Regex.IsMatch(telefono, "^\+?[0-9][0-9 \-]{6,14}$") Then Throw New ArgumentException("Cotización: escribe un teléfono válido (7 a 15 dígitos).")
+        If correo.Length > 100 OrElse (correo <> "" AndAlso Not RegularExpressions.Regex.IsMatch(correo, "^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$")) Then Throw New ArgumentException("Cotización: escribe un correo válido. Ej.: nombre@dominio.com.")
+        c.ClienteNombre = nombre
+        c.ClienteIdentificacion = identificacion
+        c.ClienteTelefono = telefono
+        c.ClienteCorreo = correo
+        c.ClienteRegistrado = clienteCotizacion.SelectedValue <> ""
+        If String.IsNullOrWhiteSpace(c.Asesor) AndAlso Actor IsNot Nothing Then c.Asesor = Actor.Nombre
+        Return c
+    End Function
+
+    Private ReadOnly Property RutaLogo As String
+        Get
+            Return Server.MapPath("~/Content/Images/capitalwest-login.png")
+        End Get
+    End Property
+
+    Protected Sub ImprimirCotizacionClick(sender As Object, e As EventArgs) Handles imprimirCotizacion.Click
+        Ejecutar(Sub()
+            Dim c = CotizacionActual()
+            ' Logo incrustado (data URI): no depende de rutas ni de que la imagen termine de cargar antes de imprimir.
+            Dim logo = If(IO.File.Exists(RutaLogo), "data:image/png;base64," & Convert.ToBase64String(IO.File.ReadAllBytes(RutaLogo)), ResolveUrl("~/Content/Images/capitalwest-login.png"))
+            documentoCotizacion.Text = c.Html(logo)
+            ClientScript.RegisterStartupScript(Me.GetType(), "imprimirCotizacion", "window.addEventListener('load',function(){setTimeout(function(){window.print();},250);});", True)
+        End Sub)
+    End Sub
+
+    Protected Sub PdfCotizacionClick(sender As Object, e As EventArgs) Handles pdfCotizacion.Click
+        Ejecutar(Sub()
+            Dim c = CotizacionActual()
+            EnviarArchivo(CotizacionPdf.Generar(c, RutaLogo), "application/pdf", "Cotizacion-" & c.Numero & ".pdf")
+        End Sub)
+    End Sub
+
+    Protected Sub ExcelCotizacionClick(sender As Object, e As EventArgs) Handles excelCotizacion.Click
+        Ejecutar(Sub()
+            Dim c = CotizacionActual()
+            EnviarArchivo(CotizacionExcel.Generar(c, RutaLogo), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Cotizacion-" & c.Numero & ".xlsx")
+        End Sub)
+    End Sub
+
+    Private Sub EnviarArchivo(contenido As Byte(), tipo As String, nombre As String)
+        Response.Clear()
+        Response.ContentType = tipo
+        Response.AddHeader("Content-Disposition", "attachment; filename=""" & nombre & """")
+        Response.AddHeader("Content-Length", contenido.Length.ToString(CultureInfo.InvariantCulture))
+        Response.BinaryWrite(contenido)
+        Response.Flush()
+        Response.SuppressContent = True
+        Context.ApplicationInstance.CompleteRequest()
+    End Sub
 
     Protected Sub CambiarPagina(sender As Object, e As GridViewPageEventArgs) Handles tablaPlan.PageIndexChanging
         Dim plan = TryCast(Session("SimuladorPlan"), List(Of CuotaPlan))

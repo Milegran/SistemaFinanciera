@@ -45,6 +45,13 @@ Partial Public Class MetodosCalculoAdmin
     Protected WithEvents txtCodigoNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtNombreNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtDescripcionNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents hfModoNuevoMetodo As Global.System.Web.UI.WebControls.HiddenField
+    Protected WithEvents rblFormaCapital As Global.System.Web.UI.WebControls.RadioButtonList
+    Protected WithEvents ddlBaseInteres As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents ddlPagoInteres As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents txtGraciaNuevo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtGloboNuevo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtCrecimientoNuevo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtVariablesNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtExprInteresNuevoMetodo As Global.System.Web.UI.WebControls.TextBox
     Protected WithEvents txtExprCapitalNuevoMetodo As Global.System.Web.UI.WebControls.TextBox

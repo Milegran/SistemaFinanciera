@@ -1,5 +1,64 @@
 ﻿<%@ Page Title="Simulador de préstamos" Language="vb" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Simulador.aspx.vb" Inherits="SistemaFinanciera.Simulador" %>
-<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server" />
+<asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
+<style>
+.quote-bar{margin:0 0 18px;padding:14px 18px;border:1px solid #dfe9e3;border-radius:16px;background:#f7faf8}
+.quote-bar-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.quote-bar-head h2{margin:2px 0 0;color:#172538;font-size:16px}
+.quote-client{margin-top:10px;padding-top:10px;border-top:1px solid #e3ece6}
+.quote-client summary{display:inline-flex;align-items:center;gap:6px;color:#0d5c37;font-size:13px;font-weight:700;cursor:pointer;list-style:none}
+.quote-client summary::-webkit-details-marker{display:none}
+.quote-client summary::before{content:"+";display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid #b9dfca;border-radius:50%;background:#fff;font-size:14px;line-height:1}
+.quote-client[open] summary::before{content:"−"}
+.quote-client summary span{color:#7a8899;font-weight:500}
+.quote-client-help{margin:8px 0 12px;color:#7a8899;font-size:12px}
+.quote-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.quote-fields .wide{grid-column:span 2}
+.quote-fields label{display:block;margin:0 0 5px;color:#53657a;font-size:12px;font-weight:650}
+.quote-fields input[readonly]{background:#eef3f0;color:#3b4b5e}
+.quote-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.quote-btn{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border:1px solid #c9dccf;border-radius:999px;background:#fff;color:#0d5c37;font-size:13px;font-weight:700;cursor:pointer}
+.quote-btn:hover{background:#eaf5ef;border-color:#9ed8bd}
+.quote-btn.primary{background:#0d7a48;border-color:#0d7a48;color:#fff}.quote-btn.primary:hover{background:#08663b}
+.quote-btn svg{width:17px;height:17px;flex:none}
+.quote-error{display:block;margin-top:6px;color:#b94e3a;font-size:12px}
+@media(max-width:900px){.quote-fields{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.quote-fields{grid-template-columns:1fr}.quote-fields .wide{grid-column:auto}.quote-actions .quote-btn{flex:1;justify-content:center}}
+/* Documento de cotización: solo visible al imprimir */
+#cotizacionImpresion{display:none}
+@media print{
+ @page{size:letter;margin:14mm 12mm}
+ body *{visibility:hidden!important}
+ #cotizacionImpresion,#cotizacionImpresion *{visibility:visible!important}
+ #cotizacionImpresion{display:block!important;position:absolute;left:0;top:0;width:100%;background:#fff}
+ .cot-doc{font:10.5pt Arial,Helvetica,sans-serif;color:#1c2a3d}
+ .cot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+ .cot-head img{height:46px}
+ .cot-head h1{margin:0;color:#1c2a3d;font-size:14pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+ .cot-parties{display:flex;justify-content:space-between;gap:24px;margin-bottom:6px}
+ .cot-parties>div{flex:1}.cot-parties .cot-right{text-align:right}
+ .cot-label{display:block;margin-bottom:4px;color:#1c2a3d;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+ .cot-parties strong{display:block;margin-bottom:4px;color:#0d7a48;font-size:14pt;font-weight:600}
+ .cot-parties p{margin:1px 0;font-size:9.5pt;color:#1c2a3d}
+ .cot-section{margin-top:12px;break-inside:avoid}
+ .cot-section.cot-section-tabla{break-inside:auto}.cot-section-tabla h2,.cot-section-tabla .cot-note{break-after:avoid}
+ .cot-section h2{margin:0 0 6px;padding:5px 8px;background:#0d7a48!important;color:#fff!important;font-size:9.5pt;text-transform:uppercase;letter-spacing:.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin:0}
+ .cot-grid div{padding:5px 4px;border-bottom:1px solid #e1e9e4}.cot-grid dt{font-size:7.5pt;color:#6b7a8c;text-transform:uppercase;font-weight:700}.cot-grid dd{margin:2px 0 0;font-size:10pt}
+ .cot-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+ .cot-summary div{padding:6px 8px;border:1px solid #d3e0d8;background:#f6faf8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-summary div.is-key{background:#e6f2eb!important}.cot-summary span{display:block;font-size:7.5pt;color:#6b7a8c;text-transform:uppercase;font-weight:700}.cot-summary strong{font-size:11pt}.cot-summary .is-key strong{color:#0d7a48}
+ .cot-note{margin:0 0 6px;font-size:8.5pt;color:#6b7a8c}
+ .cot-table{width:100%;border-collapse:collapse;font-size:8.5pt}
+ .cot-table thead{display:table-header-group}.cot-table tfoot{display:table-row-group}.cot-table tr{break-inside:avoid}
+ .cot-table th{background:#e6f2eb!important;color:#0d5c37;padding:5px;border:1px solid #d3e0d8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-table td{padding:4px 5px;border-bottom:1px solid #e8efea;text-align:right}.cot-table td:nth-child(-n+2){text-align:center}
+ .cot-table tbody tr:nth-child(even) td{background:#f6faf8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .cot-table tfoot td{font-weight:700;background:#e6f2eb!important;color:#0d5c37;border-top:1px solid #c5dccd;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cot-table tfoot td:first-child{text-align:left}
+ .cot-signs{display:flex;justify-content:space-around;margin-top:46px;break-inside:avoid}.cot-signs div{width:38%;text-align:center;font-size:9pt;color:#6b7a8c}.cot-signs span{display:block;border-top:1px solid #1c2a3d;margin-bottom:4px}
+ .cot-foot{margin-top:16px;padding-top:6px;border-top:1px solid #d3e0d8;font-size:7.5pt;color:#6b7a8c}
+}
+</style>
+</asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
 <div class="simulator-page">
     <header class="page-header simulator-page-header">
@@ -21,6 +80,27 @@
         <p class="simulator-copy-status" data-estado-copia role="status" aria-live="polite">Completa todos los campos obligatorios para copiar.</p>
     </section>
     <asp:Panel ID="resultados" runat="server" Visible="false" CssClass="simulator-results">
+        <section class="quote-bar" aria-labelledby="quoteTitle">
+            <div class="quote-bar-head">
+                <div><span class="simulator-overline">COTIZACIÓN</span><h2 id="quoteTitle">Imprime o descarga esta simulación</h2></div>
+                <div class="quote-actions">
+                    <asp:LinkButton ID="imprimirCotizacion" runat="server" CssClass="quote-btn" CausesValidation="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>Imprimir cotización</asp:LinkButton>
+                    <asp:LinkButton ID="pdfCotizacion" runat="server" CssClass="quote-btn" CausesValidation="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3"/></svg>Descargar cotización PDF</asp:LinkButton>
+                    <asp:LinkButton ID="excelCotizacion" runat="server" CssClass="quote-btn primary" CausesValidation="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>Descargar cotización Excel</asp:LinkButton>
+                </div>
+            </div>
+            <details class="quote-client"<%= If(ClienteCotizacionConDatos(), " open", "") %>>
+                <summary>Agregar datos del cliente <span>(opcional)</span></summary>
+                <p class="quote-client-help">Si los completas, aparecen en la cotización bajo «Cotización para». Puedes elegir un cliente registrado o escribir los datos de un prospecto.</p>
+                <div class="quote-fields">
+                    <div class="wide"><label for="<%= clienteCotizacion.ClientID %>">Cliente</label><asp:DropDownList ID="clienteCotizacion" runat="server" CssClass="form-select" AutoPostBack="true" CausesValidation="false" /></div>
+                    <div class="wide"><label for="<%= nombreCotizacion.ClientID %>">Nombre completo</label><asp:TextBox ID="nombreCotizacion" runat="server" CssClass="form-control" MaxLength="100" placeholder="Ej. María Pérez González" /></div>
+                    <div><label for="<%= identificacionCotizacion.ClientID %>">Identificación</label><asp:TextBox ID="identificacionCotizacion" runat="server" CssClass="form-control" MaxLength="30" placeholder="Ej. 8-123-4567" /></div>
+                    <div><label for="<%= telefonoCotizacion.ClientID %>">Teléfono</label><asp:TextBox ID="telefonoCotizacion" runat="server" CssClass="form-control" MaxLength="15" inputmode="tel" placeholder="Ej. 61234567" /></div>
+                    <div class="wide"><label for="<%= correoCotizacion.ClientID %>">Correo electrónico</label><asp:TextBox ID="correoCotizacion" runat="server" CssClass="form-control" MaxLength="100" inputmode="email" placeholder="nombre@dominio.com" /></div>
+                </div>
+            </details>
+        </section>
         <section class="simulator-summary" aria-label="Resumen de resultados">
             <article class="simulator-metric"><span>Monto solicitado</span><strong><asp:Literal ID="totalCapital" runat="server" Mode="Encode" /></strong><small>Principal usado en el cálculo</small></article>
             <article class="simulator-metric"><span>Intereses estimados</span><strong class="is-green"><asp:Literal ID="totalIntereses" runat="server" Mode="Encode" /></strong><small>Según la fórmula seleccionada</small></article>
@@ -42,6 +122,7 @@
             <p class="simulator-disclaimer">Proyección informativa basada en las condiciones actuales. No representa aprobación ni oferta de crédito; el calendario contractual se confirma en la solicitud.</p>
         </section>
     </asp:Panel>
+    <div id="cotizacionImpresion" aria-hidden="true"><asp:Literal ID="documentoCotizacion" runat="server" Mode="PassThrough" /></div>
 </div>
 <script>
 (function(){

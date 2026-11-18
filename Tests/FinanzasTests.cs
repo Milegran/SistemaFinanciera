@@ -156,6 +156,52 @@ public class FinanzasTests : MarshalByRefObject {
             }
             Check(true,"Diferencial "+par.Key+": identico al motor nativo en las seis fixtures");
         }
+        // ---- Métodos creados "Con opciones": generan fórmulas y deben igualar a los nativos ----
+        var equivalentes=new Dictionary<string,OpcionesMetodo>{
+            {"FRANCES",new OpcionesMetodo{FormaCapital="CUOTA_FIJA"}},
+            {"ALEMAN",new OpcionesMetodo{FormaCapital="CAPITAL_FIJO"}},
+            {"AMERICANO",new OpcionesMetodo{FormaCapital="AL_VENCIMIENTO"}},
+            {"COMPUESTO",new OpcionesMetodo{FormaCapital="AL_VENCIMIENTO",PagoInteres="AL_VENCIMIENTO"}}};
+        foreach(var par in equivalentes) {
+            var gen=MetodoPorOpciones.Generar(par.Value);
+            foreach(var fx in fixtures) {
+                decimal tasa=(decimal)fx[0]; int n=(int)fx[1]; decimal monto=(decimal)fx[2];
+                var nativa=Condicion(par.Key); nativa.TasaAnual=tasa; nativa.CantidadCuotas=n; nativa.Monto=monto;
+                var opc=Condicion("OPC_"+par.Key); opc.TasaAnual=tasa; opc.CantidadCuotas=n; opc.Monto=monto;
+                opc.Definiciones=gen.Variables; opc.ExprInteres=gen.ExprInteres; opc.ExprCapital=gen.ExprCapital; opc.ExprSaldo=gen.ExprSaldo;
+                var pn=motorD.Generar(nativa); var po=motorD.Generar(opc);
+                bool igual=pn.Count==po.Count && pn.Zip(po,(a,b)=>a.Fecha==b.Fecha&&a.Capital==b.Capital&&a.Interes==b.Interes&&a.Saldo==b.Saldo).All(x=>x);
+                Check(igual,"Opciones = nativo "+par.Key+" tasa="+tasa+" n="+n+" monto="+monto);
+            }
+        }
+        Func<OpcionesMetodo,int,List<CuotaPlan>> plan=(o,n)=>{var g=MetodoPorOpciones.Generar(o);var c=Condicion("OPC");c.TasaAnual=24m;c.CantidadCuotas=n;c.Monto=1000m;c.Definiciones=g.Variables;c.ExprInteres=g.ExprInteres;c.ExprCapital=g.ExprCapital;c.ExprSaldo=g.ExprSaldo;return motorD.Generar(c);};
+        var gracia=plan(new OpcionesMetodo{FormaCapital="CUOTA_FIJA",CuotasGracia=2},12);
+        Check(gracia[0].Capital==0m && gracia[1].Capital==0m && gracia[0].Interes==20m && gracia[2].Capital>0m && gracia.Last().Saldo==0m,"Gracia: 2 cuotas solo interes y luego cuota fija");
+        Check(Math.Abs(gracia[2].Cuota-gracia[10].Cuota)<=0.01m,"Gracia: cuotas posteriores fijas");
+        var corto=plan(new OpcionesMetodo{FormaCapital="CUOTA_FIJA",CuotasGracia=6},1);
+        Check(corto.Count==1 && corto[0].Capital==1000m,"Gracia se reduce en plazos cortos (1 cuota)");
+        var globo=plan(new OpcionesMetodo{FormaCapital="CAPITAL_FIJO",PorcentajeGlobo=30m},12);
+        Check(globo[0].Capital==58.33m && globo.Last().Capital>=300m && globo.Sum(x=>x.Capital)==1000m,"Globo 30%: capital fijo y 300 al final");
+        var globoF=plan(new OpcionesMetodo{FormaCapital="CUOTA_FIJA",PorcentajeGlobo=40m},12);
+        Check(globoF.Last().Capital>=400m && globoF.Last().Saldo==0m,"Globo 40% con cuota fija");
+        var crece=plan(new OpcionesMetodo{FormaCapital="CUOTA_CRECIENTE",PorcentajeCrecimiento=2m},12);
+        Check(crece[5].Cuota>crece[0].Cuota && crece.Sum(x=>x.Capital)==1000m && crece.Last().Saldo==0m,"Cuota creciente 2%");
+        var simple=plan(new OpcionesMetodo{FormaCapital="CAPITAL_FIJO",BaseInteres="MONTO_ORIGINAL"},12);
+        Check(simple.All(x=>x.Interes==20m),"Interes sobre monto original constante");
+        foreach(var o in new[]{new OpcionesMetodo{FormaCapital="CUOTA_FIJA",CuotasGracia=3,PorcentajeGlobo=25m},new OpcionesMetodo{FormaCapital="CUOTA_CRECIENTE",PorcentajeCrecimiento=20m,CuotasGracia=1}}) {
+            var g=MetodoPorOpciones.Generar(o);
+            foreach(var n in new[]{1,3,12}) plan(o,n);
+            servicio.ProbarSistemaExpresiones(g.Variables,g.ExprInteres,g.ExprCapital,g.ExprSaldo);
+            FinanzasServicio.Texto(g.Descripcion,"Descripcion",200); FinanzasServicio.Texto(g.Formula,"Formula",1000,false); FinanzasServicio.Texto(g.Algoritmo,"Algoritmo",1000,false);
+            Check(true,"Opciones combinadas pasan la prueba de 1, 3 y 12 cuotas y los textos son validos: "+g.Descripcion);
+        }
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="CUOTA_FIJA",PagoInteres="AL_VENCIMIENTO"}),"Opciones: interes al final exige capital al final");
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="AL_VENCIMIENTO",PorcentajeGlobo=10m}),"Opciones: globo solo con cuota o capital fijo");
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="CUOTA_FIJA",BaseInteres="MONTO_ORIGINAL"}),"Opciones: monto original exige capital fijo");
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="CUOTA_CRECIENTE"}),"Opciones: cuota creciente exige porcentaje");
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="CUOTA_FIJA",CuotasGracia=61}),"Opciones: gracia maxima 60");
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="AL_VENCIMIENTO",CuotasGracia=1}),"Opciones: gracia no aplica a todo al final");
+        Rechaza(()=>MetodoPorOpciones.Generar(new OpcionesMetodo{FormaCapital="OTRA"}),"Opciones: forma de capital desconocida");
         Console.WriteLine("CAPTURA: "+casos+" comprobaciones aprobadas; sin acceso a base de datos.");
     }
     public void Run(string conexion) {

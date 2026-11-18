@@ -52,7 +52,7 @@
             <div><span>Comisión retenida</span><strong>B/. <asp:Literal ID="litComision" runat="server" Mode="Encode" /></strong></div>
             <div><span>Gastos asociados</span><strong>B/. <asp:Literal ID="litGastos" runat="server" Mode="Encode" /></strong></div>
         </div>
-        <div class="finance-actions loan-detail-actions"><asp:LinkButton ID="btnVolverAbajo" runat="server" CssClass="btn btn-light" CausesValidation="false" OnClick="VolverPrestamos">Volver a préstamos</asp:LinkButton><a class="btn btn-primary" href="<%= ResolveUrl("~/Pagos/Pagos.aspx") %>">Registrar pago</a></div>
+        <div class="finance-actions loan-detail-actions"><asp:LinkButton ID="btnVolverAbajo" runat="server" CssClass="btn btn-light" CausesValidation="false" OnClick="VolverPrestamos">Volver a préstamos</asp:LinkButton><% If Actor.Puede("ADMINISTRADOR", "CAJERO") Then %><a class="btn btn-primary" href="<%= ResolveUrl("~/Pagos/Pagos.aspx") %>">Registrar pago</a><% End If %></div>
     </section>
 
     <section class="cw-card simulator-schedule request-detail-schedule" aria-labelledby="loanScheduleTitle">
