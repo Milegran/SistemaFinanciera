@@ -8,75 +8,7 @@
 <style>
 .admin-dialog-heading{display:flex;align-items:center;gap:14px;margin-bottom:20px}.admin-profile-avatar{display:grid;place-items:center;width:48px;height:48px;flex:none;border-radius:50%;background:#cfe2ff;color:#2756b7;font-size:15px;font-weight:700;letter-spacing:.01em}.admin-dialog-heading h2{margin:0}.admin-dialog-heading .admin-dialog-lead{margin:4px 0 0}.admin-account-state{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #e2e9ed;border-radius:15px;background:#fbfcfd}.admin-account-copy strong,.admin-account-copy small{display:block}.admin-account-copy strong{color:#53687c;font-size:13px;font-weight:600}.admin-account-copy small{margin-top:3px;color:#8491a3;font-size:11px}.admin-account-check{display:inline-flex;align-items:center;gap:8px;flex:none;padding:9px 13px;border:1px solid #dfe7eb;border-radius:999px;background:#fff}.admin-account-check input{width:18px;height:18px;margin:0;accent-color:#0d7a48;cursor:pointer}.admin-account-check label{margin:0;color:#34465a;font-size:12px;font-weight:600;cursor:pointer}@media(max-width:560px){.admin-dialog-heading{align-items:flex-start}.admin-profile-avatar{width:42px;height:42px}.admin-account-state{align-items:flex-start;flex-direction:column}}
 </style>
-<style>
-.password-guide{grid-column:1/-1;margin-top:10px;padding:12px 14px;background:#f5faf7;border-radius:12px;font-size:13px}
-.password-guide meter{width:100%;height:14px;margin:6px 0 4px}
-.password-guide-title{margin:8px 0 4px;color:#34465a;font-weight:600}
-.password-guide ul{list-style:none;margin:0;padding:0}
-.password-guide li{display:flex;align-items:center;gap:9px;margin:5px 0;color:#5d6c7e}
-.password-guide .pw-icon{display:inline-grid;place-items:center;width:16px;flex:none;font-weight:700;font-size:14px;line-height:1}
-.password-guide li.ok .pw-icon{color:#1a9c5b}
-.password-guide li.fail .pw-icon{color:#d1324b}
-.password-guide li.pending .pw-icon{color:#a7b2bf}
-.pw-wrap{position:relative;display:block}
-.pw-wrap>.form-control{padding-right:46px}
-.pw-eye{position:absolute;top:0;right:0;display:grid;place-items:center;width:44px;height:38px;padding:0;border:0;background:transparent;color:#6b7a8c;cursor:pointer;border-radius:0 10px 10px 0}
-.pw-eye:hover{color:#0d7a48}.pw-eye:focus-visible{outline:2px solid #0d7a48;outline-offset:-3px}
-.pw-eye svg{width:20px;height:20px}
-.admin-dialog{scrollbar-width:none;-ms-overflow-style:none}.admin-dialog::-webkit-scrollbar{display:none}
-.form-control.pw-match,.form-control.pw-match:focus{border-color:#1a9c5b;box-shadow:0 0 0 3px rgba(26,156,91,.16)}
-.form-control.pw-mismatch,.form-control.pw-mismatch:focus{border-color:#d1324b;box-shadow:0 0 0 3px rgba(209,50,75,.16)}
-</style><script>document.addEventListener('DOMContentLoaded',function(){
- // Botón de ojo para mostrar/ocultar en todos los campos de contraseña del modal.
- const ojo='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
- const ojoTachado='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/></svg>';
- document.querySelectorAll('.admin-dialog input[type="password"]').forEach(function(field){
-  field.dataset.passwordField='1';
-  if(field.form)field.form.addEventListener('submit',function(){field.type='password';});
-  const wrap=document.createElement('span');wrap.className='pw-wrap';
-  field.parentNode.insertBefore(wrap,field);wrap.appendChild(field);
-  const btn=document.createElement('button');btn.type='button';btn.className='pw-eye';btn.setAttribute('aria-controls',field.id);
-  function pintar(){const visible=field.type==='text';btn.innerHTML=visible?ojoTachado:ojo;btn.setAttribute('aria-label',visible?'Ocultar contraseña':'Mostrar contraseña');btn.setAttribute('aria-pressed',visible?'true':'false');btn.title=visible?'Ocultar contraseña':'Mostrar contraseña';}
-  function ajustar(){if(field.offsetHeight)btn.style.height=field.offsetHeight+'px';}
-  btn.addEventListener('click',function(){const pos=field.selectionStart;field.type=field.type==='password'?'text':'password';pintar();field.focus();try{field.setSelectionRange(pos,pos);}catch(e){}});
-  wrap.appendChild(btn);pintar();ajustar();field.addEventListener('focus',ajustar);window.addEventListener('resize',ajustar);
- });
- document.querySelectorAll('[data-password-policy]').forEach(function(field){
-  const min=Number(field.dataset.minimo),max=Number(field.dataset.maximo);
-  const confirmField=document.querySelector('[data-igual="'+field.id+'"]');
-  const rules=[['Al menos '+min+' caracteres',v=>v.length>=min],['Máximo '+max+' caracteres',v=>v.length<=max]];
-  if(field.dataset.mayuscula==='1')rules.push(['Una mayúscula (A–Z)',v=>/[A-Z]/.test(v)]);
-  if(field.dataset.numero==='1')rules.push(['Un número (0–9)',v=>/[0-9]/.test(v)]);
-  const box=document.createElement('div');box.className='password-guide';box.id=field.id+'Guide';
-  const status=document.createElement('div');status.setAttribute('aria-live','polite');box.appendChild(status);
-  const meter=document.createElement('meter');meter.min=0;meter.max=4;meter.low=2;meter.high=3;meter.optimum=4;meter.setAttribute('aria-label','Seguridad estimada de la contraseña');box.appendChild(meter);
-  const title=document.createElement('div');title.className='password-guide-title';title.textContent='Elige una contraseña segura:';box.appendChild(title);
-  const list=document.createElement('ul');box.appendChild(list);
-  function addItem(text){const li=document.createElement('li'),icon=document.createElement('span');icon.className='pw-icon';icon.setAttribute('aria-hidden','true');li.appendChild(icon);li.appendChild(document.createTextNode(text));list.appendChild(li);return li;}
-  function setItem(li,state){li.className=state;li.firstChild.textContent=state==='ok'?'✓':state==='fail'?'✕':'•';}
-  const items=rules.map(r=>addItem(r[0]));
-  const matchItem=confirmField?addItem('Coincidencia de contraseñas'):null;
-  if(confirmField){const cell=confirmField.closest('.admin-dialog-grid > div');(cell||confirmField).insertAdjacentElement('afterend',box);confirmField.setAttribute('aria-describedby',box.id);}
-  else field.insertAdjacentElement('afterend',box);
-  field.setAttribute('aria-describedby',box.id);
-  function update(){const value=field.value,missing=[];
-   rules.forEach((r,i)=>{const ok=r[1](value);setItem(items[i],!value?'pending':ok?'ok':'fail');if(!ok)missing.push(r[0]);});
-   const optional=!value&&field.dataset.obligatoria==='0';
-   let score=!value?0:missing.length?1:value.length>=16&&/[a-z]/.test(value)&&/[^a-zA-Z0-9]/.test(value)?4:3;
-   meter.value=score;status.textContent=optional?'Vacía: se conserva la contraseña actual.':!value?'Escriba una contraseña.':score===1?'Insegura: faltan requisitos.':score===4?'Segura (estimación).':'Cumple los requisitos; seguridad media.';
-   field.setCustomValidity(optional?'':missing.length?'Falta: '+missing.join(', '):'');
-   if(confirmField){const conf=confirmField.value,match=conf===value;
-    setItem(matchItem,!value&&!conf?'pending':conf&&match?'ok':'fail');
-    confirmField.classList.toggle('pw-match',!!conf&&match);
-    confirmField.classList.toggle('pw-mismatch',!!conf&&!match);
-    confirmField.setCustomValidity(match?'':value&&!conf?'Confirme la contraseña.':'Las contraseñas no coinciden.');}
-  }
-  field.addEventListener('input',update);field.addEventListener('change',update);
-  if(confirmField){confirmField.addEventListener('input',update);confirmField.addEventListener('change',update);}
-  update();
- });
-});
-</script></asp:Content>
+</asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
 <div class="finance-page admin-page">
  <%-- Fuera del modal: el modal no se renderiza cerrado y el modo elegido debe llegar al servidor. --%>

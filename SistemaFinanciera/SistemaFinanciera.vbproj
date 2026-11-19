@@ -160,6 +160,8 @@
     <Content Include="Scripts\CapitalWest.js" />
     <Content Include="Scripts\Acceso.js" />
     <Content Include="Scripts\FinanzasFormularios.js" />
+    <Content Include="Scripts\PoliticaClave.js" />
+    <Content Include="Content\PoliticaClave.css" />
     <Content Include="Scripts\StitchClientes.js" />
     <Content Include="Scripts\StitchProductos.js" />
     <Content Include="Content\Site.css" />
@@ -284,6 +286,7 @@
       <SubType>ASPXCodebehind</SubType>
     </Compile>
     <Compile Include="AccesoPantallas.vb" />
+    <Compile Include="AutenticacionSesion.vb" />
     <Compile Include="FinanzasPagina.vb">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -512,6 +515,8 @@
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
         <WebProjectProperties>
+          <StartPageUrl>Acceso.aspx</StartPageUrl>
+          <StartAction>SpecificPage</StartAction>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>61005</DevelopmentServerPort>

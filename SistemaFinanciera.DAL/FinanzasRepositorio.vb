@@ -57,9 +57,9 @@ Public Class FinanzasRepositorio
         End Using
     End Function
     Private Shared Function Usuario(cn As MySqlConnection, tx As MySqlTransaction, id As Integer) As UsuarioFinanzas
-        Dim t = Tabla(cn, tx, "SELECT u.Id,u.NombreCompleto,u.DebeCambiarClave,COALESCE((SELECT CAST(Valor AS UNSIGNED) FROM ParametrosSistema WHERE Codigo='INACTIVIDAD_MINUTOS'),20) AS MinutosInactividad,r.Codigo FROM Usuarios u JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id JOIN Roles r ON r.Id=ur.RolId WHERE u.Id=@p0 AND u.Activo=1 AND r.Activo=1", id)
+        Dim t = Tabla(cn, tx, "SELECT u.Id,u.NombreCompleto,u.DebeCambiarClave,u.VersionSesion,COALESCE((SELECT CAST(Valor AS UNSIGNED) FROM ParametrosSistema WHERE Codigo='INACTIVIDAD_MINUTOS'),20) AS MinutosInactividad,r.Codigo FROM Usuarios u JOIN UsuarioRoles ur ON ur.UsuarioId=u.Id JOIN Roles r ON r.Id=ur.RolId WHERE u.Id=@p0 AND u.Activo=1 AND r.Activo=1", id)
         If t.Rows.Count = 0 Then Throw New UnauthorizedAccessException("Inicie sesión con un usuario activo y un rol asignado.")
-        Return New UsuarioFinanzas With {.Id = id, .Nombre = CStr(t.Rows(0)("NombreCompleto")), .Roles = t.AsEnumerable().Select(Function(r) CStr(r("Codigo"))).ToArray(), .DebeCambiarClave = CBool(t.Rows(0)("DebeCambiarClave")), .MinutosInactividad = Math.Max(1,CInt(t.Rows(0)("MinutosInactividad")))}
+        Return New UsuarioFinanzas With {.Id = id, .Nombre = CStr(t.Rows(0)("NombreCompleto")), .Roles = t.AsEnumerable().Select(Function(r) CStr(r("Codigo"))).ToArray(), .DebeCambiarClave = CBool(t.Rows(0)("DebeCambiarClave")), .VersionSesion = CLng(t.Rows(0)("VersionSesion")), .MinutosInactividad = Math.Max(1,CInt(t.Rows(0)("MinutosInactividad")))}
     End Function
     Private Shared Sub Autorizar(cn As MySqlConnection, tx As MySqlTransaction, id As Integer, ParamArray roles As String())
         If Not Usuario(cn, tx, id).Puede(roles) Then Throw New UnauthorizedAccessException("Su rol no permite realizar esta operación.")

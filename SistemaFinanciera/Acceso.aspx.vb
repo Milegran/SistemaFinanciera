@@ -33,7 +33,10 @@ Public Class Acceso
         Try
             If Not IsPostBack Then
                 If Request.IsAuthenticated Then
-                    Response.Redirect("~/Default.aspx", False)
+                    ' Visual Studio puede dejar IIS Express activo al detener la depuración.
+                    ' Abrir de nuevo la página inicial de Acceso debe pedir credenciales igualmente.
+                    FormsAuthentication.SignOut()
+                    Response.Redirect("~/Acceso.aspx", False)
                     Context.ApplicationInstance.CompleteRequest()
                     Return
                 End If
@@ -93,9 +96,7 @@ Public Class Acceso
         End Try
         ' Aplicar la duración configurada también a la primera cookie de acceso.
         Dim actor=Servicio.Usuario(id)
-        Dim ahora=DateTime.Now
-        Dim ticket As New FormsAuthenticationTicket(2,id.ToString(Globalization.CultureInfo.InvariantCulture),ahora,ahora.AddMinutes(actor.MinutosInactividad),False,"",FormsAuthentication.FormsCookiePath)
-        Response.Cookies.Set(New HttpCookie(FormsAuthentication.FormsCookieName,FormsAuthentication.Encrypt(ticket)) With {.HttpOnly=True,.Secure=Request.IsSecureConnection,.Path=ticket.CookiePath})
+        AutenticacionSesion.Emitir(Context, actor)
         Session.Abandon()
         Response.Redirect("~/Default.aspx", False)
         Context.ApplicationInstance.CompleteRequest()

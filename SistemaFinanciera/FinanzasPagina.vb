@@ -27,12 +27,12 @@ Public Class FinanzasPagina
             Dim id As Integer
             If Not Integer.TryParse(User.Identity.Name, id) Then Throw New UnauthorizedAccessException()
             Actor = ServicioFinanzas.Usuario(id)
+            If Not AutenticacionSesion.VersionVigente(User, Actor) Then Throw New UnauthorizedAccessException("Inicie sesión nuevamente.")
             Context.Items("CapitalWest.UsuarioFinanzas") = Actor
             Session.Timeout=Actor.MinutosInactividad
-            Dim ahoraUtc=DateTime.UtcNow
-            Dim ticket As New FormsAuthenticationTicket(2,id.ToString(Globalization.CultureInfo.InvariantCulture),ahoraUtc,ahoraUtc.AddMinutes(Actor.MinutosInactividad),False,"",FormsAuthentication.FormsCookiePath)
-            Dim cookie As New HttpCookie(FormsAuthentication.FormsCookieName,FormsAuthentication.Encrypt(ticket)) With {.HttpOnly=True,.Secure=Request.IsSecureConnection,.Path=ticket.CookiePath}
-            Response.Cookies.Set(cookie)
+            AutenticacionSesion.Emitir(Context, Actor)
+            Response.Cache.SetCacheability(HttpCacheability.NoCache)
+            Response.Cache.SetNoStore()
             If Actor.DebeCambiarClave AndAlso Not Request.AppRelativeCurrentExecutionFilePath.EndsWith("/Administracion/CambiarClave.aspx", StringComparison.OrdinalIgnoreCase) Then
                 Response.Redirect("~/Administracion/CambiarClave.aspx", True)
                 Return
