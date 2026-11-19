@@ -34,6 +34,15 @@ Public Class Clientes
         End Set
     End Property
     Protected Sub Page_Init(sender As Object, e As EventArgs) Handles Me.Init
+        ddlCedulaPrefijo.Items.Clear()
+        ddlCedulaPrefijo.Items.Add(New ListItem("Seleccione...", ""))
+        For numero As Integer=1 To 13
+            Dim prefijo=numero.ToString(CultureInfo.InvariantCulture)
+            ddlCedulaPrefijo.Items.Add(New ListItem(prefijo,prefijo))
+        Next
+        For Each prefijo In {"E","PE","N"}
+            ddlCedulaPrefijo.Items.Add(New ListItem(prefijo,prefijo))
+        Next
         ddlEstadoCivil.Items.Clear()
         ddlEstadoCivil.Items.Add(New ListItem("Seleccione...", ""))
         For Each opcion In Servicio.EstadosCivilesActivos()
@@ -153,6 +162,13 @@ Public Class Clientes
         ddlTipoPersona.SelectedValue = If(c.TipoPersona, "")
         ddlTipoIdentificacion.SelectedValue = If(c.TipoIdentificacion, "")
         txtIdentificacion.Text = If(c.Identificacion, "")
+        ddlCedulaPrefijo.SelectedValue="" : txtCedulaTomo.Text="" : txtCedulaAsiento.Text=""
+        If c.TipoIdentificacion="CEDULA" Then
+            Dim partes=txtIdentificacion.Text.Split("-"c)
+            If partes.Length=3 Then
+                ddlCedulaPrefijo.SelectedValue=If(ddlCedulaPrefijo.Items.FindByValue(partes(0)) IsNot Nothing,partes(0),"") : txtCedulaTomo.Text=partes(1) : txtCedulaAsiento.Text=partes(2)
+            End If
+        End If
         txtNombres.Text = If(c.Nombres, "")
         txtApellidos.Text = If(c.Apellidos, "")
         ddlSexo.SelectedValue = If(c.Sexo, "")
@@ -247,7 +263,17 @@ Public Class Clientes
                      Dim c As New Cliente With {.Id = ClienteId, .Version = DirectCast(ViewState("ClienteVersion"), Byte()), .FechaNacimiento = fecha, .Ingresos = ingresos}
                      c.TipoPersona = ddlTipoPersona.SelectedValue
                      c.TipoIdentificacion = ddlTipoIdentificacion.SelectedValue
-                     c.Identificacion = txtIdentificacion.Text.Trim()
+                     If c.TipoIdentificacion="CEDULA" Then
+                         Dim prefijo=ddlCedulaPrefijo.SelectedValue.Trim().ToUpperInvariant()
+                         If String.IsNullOrEmpty(prefijo) OrElse ddlCedulaPrefijo.Items.FindByValue(prefijo) Is Nothing Then Throw New ArgumentException("Seleccione el prefijo de la cédula.")
+                         Dim tomo=txtCedulaTomo.Text.Trim(), asiento=txtCedulaAsiento.Text.Trim()
+                         If Not System.Text.RegularExpressions.Regex.IsMatch(prefijo,"^(?:[1-9]|1[0-3]|E|PE|N)$") Then Throw New ArgumentException("Indique un prefijo de cédula válido.")
+                         If Not System.Text.RegularExpressions.Regex.IsMatch(tomo,"^[0-9]{1,4}$") Then Throw New ArgumentException("Tomo: indique de 1 a 4 dígitos.")
+                         If Not System.Text.RegularExpressions.Regex.IsMatch(asiento,"^[0-9]{1,5}$") Then Throw New ArgumentException("Asiento: indique de 1 a 5 dígitos.")
+                         c.Identificacion=prefijo & "-" & tomo & "-" & asiento
+                     Else
+                         c.Identificacion = txtIdentificacion.Text.Trim()
+                     End If
                      c.Nombres = txtNombres.Text.Trim()
                      c.Apellidos = txtApellidos.Text.Trim()
                      c.Sexo = ddlSexo.SelectedValue

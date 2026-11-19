@@ -6,7 +6,7 @@ Imports System.Net.Mail
 ' Las reglas se aplican en el servidor, incluso cuando se omite la validación del navegador.
 Public Class ClienteServicio
     Public Const PatronNombre As String = "^[\p{L}\p{M}]+\.?(?:[ '\u2019.\-][\p{L}\p{M}]+\.?)*$"
-    Public Const PatronCedula As String = "^(?:[0-9]{1,2}(?:AV|PI)?|PE|E|N|AV|PI)-[0-9]{1,6}-[0-9]{1,6}$"
+    Public Const PatronCedula As String = "^(?:[1-9]|1[0-3]|E|PE|N)-[0-9]{1,4}-[0-9]{1,5}$"
     Public Const PatronPasaporte As String = "^[A-Z0-9]{5,30}$"
     Public Const PatronRuc As String = "^[0-9]{1,10}-[0-9]{1,6}-[0-9]{1,10}$"
     Public Const PatronTelefono As String = "^(?!0+$)[0-9]{7,8}$"

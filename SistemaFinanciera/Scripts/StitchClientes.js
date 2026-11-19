@@ -97,6 +97,7 @@
         const field = name => fields.find(el => el.id.endsWith('_'+name));
         const kind = field('ddlTipoPersona');
         const documentType = field('ddlTipoIdentificacion');
+        const cedulaFields=['ddlCedulaPrefijo','txtCedulaTomo','txtCedulaAsiento'].map(field);
         const namePattern = new RegExp(rules.nombre, 'u');
         const phonePattern = new RegExp(rules.telefono, 'u');
         const letters = /\p{L}/u;
@@ -110,6 +111,12 @@
         function configure() {
             fields.forEach(el => { el.required = !el.disabled; });
             const id = field('txtIdentificacion');
+            const isCedula=documentType.value==='CEDULA';
+            document.getElementById('cedulaSeparada').hidden=!isCedula;
+            document.getElementById('identificacionUnica').hidden=isCedula;
+            id.disabled=isCedula; id.required=!isCedula;
+            if(isCedula) showError(id,'');
+            cedulaFields.forEach(el=>{el.disabled=!isCedula;el.required=isCedula;if(!isCedula)showError(el,'');});
             const labels = {
                 CEDULA: ['8-123-456 o E-123-456', rules.cedula],
                 PASAPORTE: ['5 a 30 letras o números', rules.pasaporte],
@@ -140,6 +147,9 @@
             switch (key) {
                 case 'ddlTipoPersona': return ['NATURAL','JURIDICA'].includes(value) ? '' : 'Seleccione un tipo de persona válido.';
                 case 'ddlTipoIdentificacion': return (natural() ? ['CEDULA','PASAPORTE'] : ['RUC']).includes(value) ? '' : 'Seleccione una identificación compatible con el tipo de persona.';
+                case 'ddlCedulaPrefijo': return Array.from(el.options).some(option=>option.value===value && !option.disabled) ? '' : 'Seleccione el prefijo de la cédula.';
+                case 'txtCedulaTomo': return /^[0-9]{1,4}$/.test(value) ? '' : 'Use de 1 a 4 dígitos.';
+                case 'txtCedulaAsiento': return /^[0-9]{1,5}$/.test(value) ? '' : 'Use de 1 a 5 dígitos.';
                 case 'txtIdentificacion': {
                     const pattern = {CEDULA:rules.cedula,PASAPORTE:rules.pasaporte,RUC:rules.ruc}[documentType.value];
                     return pattern && new RegExp(pattern,'u').test(value.replace(/\s/g,'').toUpperCase()) ? '' : 'Formato inválido. Ejemplo: '+el.placeholder+'.';
@@ -187,6 +197,8 @@
             const key = el.id.split('_').pop();
             if ((key === 'txtNombres' && natural()) || key === 'txtApellidos') return /^[\p{L}\p{M}\s'\u2019.\-]*$/u.test(text);
             if (key === 'txtIdentificacion') return (documentType.value === 'RUC' ? /^[0-9\s-]*$/ : /^[a-zA-Z0-9\s-]*$/).test(text);
+            if (key === 'ddlCedulaPrefijo') return /^[A-Za-z0-9]*$/.test(text);
+            if (key === 'txtCedulaTomo' || key === 'txtCedulaAsiento') return /^[0-9]*$/.test(text);
             if (key === 'txtTelefono') return /^[0-9\s()+-]*$/.test(text);
             if (key === 'txtIngresos') return /^[0-9.]*$/.test(text);
             return !forbidden.test(text);

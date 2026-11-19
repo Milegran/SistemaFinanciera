@@ -1,6 +1,10 @@
 ﻿' Declaraciones sincronizadas con Clientes.aspx.
 Option Strict On
 Partial Public Class Clientes
+    Protected WithEvents ddlCedulaPrefijo As Global.System.Web.UI.WebControls.DropDownList
+    Protected WithEvents txtCedulaTomo As Global.System.Web.UI.WebControls.TextBox
+    Protected WithEvents txtCedulaAsiento As Global.System.Web.UI.WebControls.TextBox
+
     Protected WithEvents ddlTipoPersona As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents ddlTipoIdentificacion As Global.System.Web.UI.WebControls.DropDownList
     Protected WithEvents txtIdentificacion As Global.System.Web.UI.WebControls.TextBox
