@@ -147,8 +147,8 @@
                 <div><label for="<%= estadoFactura.ClientID %>">Estado</label><asp:DropDownList ID="estadoFactura" runat="server" CssClass="form-select"><asp:ListItem Text="Todos los estados" Value="" /><asp:ListItem Text="Aplicado" Value="APLICADO" /><asp:ListItem Text="Anulado" Value="ANULADO" /></asp:DropDownList></div>
                 <div><label for="<%= fechaDesdeFactura.ClientID %>">Desde</label><asp:TextBox ID="fechaDesdeFactura" runat="server" CssClass="form-control" TextMode="Date" /></div>
                 <div><label for="<%= fechaHastaFactura.ClientID %>">Hasta</label><asp:TextBox ID="fechaHastaFactura" runat="server" CssClass="form-control" TextMode="Date" /></div>
-                <asp:Button ID="filtrarFacturas" runat="server" Text="Buscar" CssClass="btn btn-outline-primary" CausesValidation="false" OnClick="FiltrarFacturasClick" />
-                <asp:Button ID="limpiarFacturas" runat="server" Text="Limpiar" CssClass="btn btn-light" CausesValidation="false" OnClick="LimpiarFacturasClick" />
+                <asp:Button ID="filtrarFacturas" runat="server" Text="Buscar" CssClass="btn btn-outline-primary" CausesValidation="false" formnovalidate="formnovalidate" OnClick="FiltrarFacturasClick" />
+                <asp:Button ID="limpiarFacturas" runat="server" Text="Limpiar" CssClass="btn btn-light" CausesValidation="false" formnovalidate="formnovalidate" OnClick="LimpiarFacturasClick" />
             </asp:Panel>
             <div class="table-responsive"><asp:GridView ID="listado" runat="server" AutoGenerateColumns="false" DataKeyNames="Id,PrestamoId" AllowPaging="true" PageSize="20" OnPageIndexChanging="PaginarFacturas" CssClass="table" GridLines="None" EmptyDataText="No hay pagos registrados para los filtros seleccionados."><Columns>
                 <asp:BoundField DataField="NumeroRecibo" HeaderText="Recibo" />
