@@ -1,9 +1,8 @@
-<%@ Page Title="Préstamos" Language="VB" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Prestamos.aspx.vb" Inherits="SistemaFinanciera.Prestamos" %>
+﻿<%@ Page Title="Préstamos" Language="VB" AutoEventWireup="false" MasterPageFile="~/Site.Master" CodeBehind="Prestamos.aspx.vb" Inherits="SistemaFinanciera.Prestamos" %>
 <asp:Content ID="Body" ContentPlaceHolderID="MainContent" runat="server">
 <div class="finance-page loan-page">
     <header class="page-header page-header--split">
         <div><h1>Préstamos</h1><p>CapitalWest · Gestión financiera</p></div>
-        <a href="<%= ResolveUrl("~/Acceso.aspx") %>" class="btn btn-light">Acceso</a>
     </header>
     <div id="pnlMensaje" runat="server" class="alert" role="status" aria-live="polite"><asp:Literal ID="mensaje" runat="server" Mode="Encode" /></div>
 

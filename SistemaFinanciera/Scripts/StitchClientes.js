@@ -64,6 +64,18 @@
     }
     const dialog = document.querySelector('.form-overlay');
     if (dialog) {
+        // Enter en un campo no debe activar el submit implícito (Cancelar/Limpiar).
+        dialog.addEventListener('keydown', function mantenerFormulario(event) {
+            if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) return;
+            const target = event.target;
+            if (target.tagName !== 'INPUT' || ['submit','button','reset','image'].includes(target.type)) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const fields = Array.from(dialog.querySelectorAll('input,select,textarea')).filter(el => !el.disabled && !el.readOnly && !['hidden','submit','button','reset','image'].includes(el.type) && el.tabIndex !== -1 && el.getClientRects().length > 0);
+            const index = fields.indexOf(target);
+            if (index >= 0 && index + 1 < fields.length) fields[index + 1].focus();
+        }, true);
+
         const hidden = dialog.querySelector('input[type=hidden]');
         const tabs = Array.from(dialog.querySelectorAll('[data-form-tab]'));
         const submitButton = dialog.querySelector('input[id$="btnGuardarCliente"]');
